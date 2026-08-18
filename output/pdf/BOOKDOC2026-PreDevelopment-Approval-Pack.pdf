@@ -1,0 +1,1974 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/PageMode /UseNone
+/Pages 2 0 R
+/Type /Catalog
+>>
+endobj
+2 0 obj
+<<
+/Count 5
+/Kids [ 3 0 R 8 0 R 10 0 R 12 0 R 14 0 R ]
+/Type /Pages
+>>
+endobj
+3 0 obj
+<<
+/Contents 4 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+4 0 obj
+<<
+/Length 8561
+>>
+stream
+q
+1 0 0 1 0 0 cm
+BT
+/F1 12 Tf
+14.4 TL
+ET
+q
+0.85098 0.886275 0.952941 RG
+0.4 w
+n
+72 48.96 m
+540 48.96 l
+S
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.356863 0.396078 0.45098 rg
+BT
+1 0 0 1 72 34.56 Tm
+(BOOKDOC2026 \174 Pre\055development Approval Pack) Tj
+T*
+ET
+BT
+1 0 0 1 514.648 34.56 Tm
+(Page 1) Tj
+T*
+ET
+Q
+q
+1 0 0 1 78 700.8 cm
+q
+0.090196 0.211765 0.364706 rg
+BT
+1 0 0 1 0 3 Tm
+/F2 21 Tf
+24 TL
+(PRE\055DEVELOPMENT APPROVAL PACK) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 678.8 cm
+q
+0.356863 0.396078 0.45098 rg
+BT
+1 0 0 1 0 3 Tm
+/F1 13 Tf
+16 TL
+(BOOKDOC2026 Clinic Management SaaS \055 Delhi Pilot) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 652.6 cm
+q
+BT
+1 0 0 1 0 2.6 Tm
+12.2 TL
+/F2 9.6 Tf
+0.121569 0.160784 0.215686 rg
+(Prepared\072) Tj
+/F1 9.6 Tf
+( 2026\05508\05509) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 634.4 cm
+q
+BT
+1 0 0 1 0 2.6 Tm
+12.2 TL
+/F2 9.6 Tf
+0.121569 0.160784 0.215686 rg
+(Product focus\072) Tj
+/F1 9.6 Tf
+( Physiotherapy and Orthopaedics clinic management) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 616.2 cm
+q
+BT
+1 0 0 1 0 2.6 Tm
+12.2 TL
+/F2 9.6 Tf
+0.121569 0.160784 0.215686 rg
+(Deployment\072) Tj
+/F1 9.6 Tf
+( One centrally operated multi\055tenant SaaS deployment) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 598 cm
+q
+BT
+1 0 0 1 0 2.6 Tm
+12.2 TL
+/F2 9.6 Tf
+0.121569 0.160784 0.215686 rg
+(Document status\072) Tj
+/F1 9.6 Tf
+( Baseline for stakeholder review \055 implementation not authorized) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 561.6 cm
+q
+0.917647 0.94902 0.972549 rg
+n
+0 30.4 468 -30.4 re
+f*
+0 0 0 rg
+BT
+/F1 10 Tf
+12 TL
+ET
+q
+1 0 0 1 6 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Decision requested\072 Approve this pack as the pre\055development baseline and authorize the remaining discovery workshops and) Tj
+T*
+(evidence collection only\056 This document does not authorize code\054 database migration\054 vendor purchase or clinical go\055live\056) Tj
+T*
+ET
+Q
+Q
+q
+1 J
+1 j
+0.85098 0.886275 0.952941 RG
+0.4 w
+n
+0 30.4 m
+468 30.4 l
+S
+n
+0 0 m
+468 0 l
+S
+n
+0 0 m
+0 30.4 l
+S
+n
+468 0 m
+468 30.4 l
+S
+0.180392 0.458824 0.713725 RG
+0.8 w
+n
+0 30.4 m
+468 30.4 l
+S
+n
+0 0 m
+468 0 l
+S
+n
+0 0 m
+0 30.4 l
+S
+n
+468 0 m
+468 30.4 l
+S
+Q
+Q
+Q
+q
+1 0 0 1 78 553.6 cm
+Q
+q
+1 0 0 1 78 523.6 cm
+q
+0.180392 0.458824 0.713725 rg
+BT
+1 0 0 1 0 3 Tm
+/F2 15 Tf
+18 TL
+(1\056 Executive baseline) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 480 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 27 Tm
+/F1 9.6 Tf
+12.2 TL
+(BOOKDOC2026 will be a centrally operated clinic\055management SaaS serving independent clinic) Tj
+T*
+(customers\056 Each customer is an isolated tenant with its own organizations and branches\056 Delhi is the first) Tj
+T*
+(pilot jurisdiction\054 and Physiotherapy plus Orthopaedics are the first specialty configurations\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 322.4 cm
+q
+0.180392 0.458824 0.713725 rg
+n
+0 151.6 468 -20.2 re
+f*
+1 1 1 rg
+BT
+/F1 10 Tf
+12 TL
+ET
+q
+1 0 0 1 6 136.4 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Dimension) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 136.4 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Approved planning value) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 136.4 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Status) Tj
+T*
+ET
+Q
+Q
+0 0 0 rg
+q
+1 0 0 1 6 116.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Clinic tenants) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 116.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(10 in year one\073 50 by year three) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 116.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Confirmed) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 96 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Typical clinic) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 96 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(1\05520 staff\073 fewer than 10 branches) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 96 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Confirmed) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 75.8 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Normal tenant capacity) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 75.8 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Up to 100\054000 registered patients\073 about 100 appointments\057day) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 75.8 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Confirmed) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 55.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Large owner tenant) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 55.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(About 20x normal data\073 about 2\054000 appointments\057day) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 55.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Confirmed) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 30.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Onboarding) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 25.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Clinic\055submitted or operator\055created application\073 platform approval before) Tj
+T*
+(activation) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 30.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Confirmed) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Branch configuration) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 116 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+() Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 399 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Confirmed) Tj
+T*
+ET
+Q
+Q
+q
+1 J
+1 j
+0.85098 0.886275 0.952941 RG
+0.4 w
+n
+0 151.6 m
+468 151.6 l
+S
+n
+0 0 m
+468 0 l
+S
+n
+0 0 m
+0 151.6 l
+S
+n
+468 0 m
+468 151.6 l
+S
+n
+0 131.4 m
+468 131.4 l
+S
+n
+0 111.2 m
+468 111.2 l
+S
+n
+0 91 m
+468 91 l
+S
+n
+0 70.8 m
+468 70.8 l
+S
+n
+0 50.6 m
+468 50.6 l
+S
+n
+0 20.2 m
+468 20.2 l
+S
+n
+110 0 m
+110 151.6 l
+S
+n
+393 0 m
+393 151.6 l
+S
+Q
+Q
+Q
+q
+1 0 0 1 78 314.4 cm
+Q
+q
+1 0 0 1 78 284.4 cm
+q
+0.180392 0.458824 0.713725 rg
+BT
+1 0 0 1 0 3 Tm
+/F2 15 Tf
+18 TL
+(2\056 Product and architecture decisions) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 253 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(Use the SDTS\056ERP2026 modular\055monolith pattern with BookDoc2026 namespaces and) Tj
+T*
+2.5 0 Td
+(module\055owned schemas\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 234.8 cm
+q
+BT
+1 0 0 1 10 2.6 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+BT
+1 0 0 1 22 2.6 Tm
+-2.5 0 Td
+12.2 TL
+/F1 9.6 Tf
+0.121569 0.160784 0.215686 rg
+(Use Tenant \055) Tj
+(\076 Organization \055) Tj
+(\076 Branch as the durable commercial and security hierarchy\056) Tj
+T*
+2.5 0 Td
+ET
+Q
+Q
+q
+1 0 0 1 78 204.4 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(Keep platform\055operator control\055plane access separate from clinic Admin\054 Portal and patient) Tj
+T*
+2.5 0 Td
+(experiences\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 174 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(Use one SQL Server database initially with mandatory tenant scope\073 database\055per\055tenant is not) Tj
+T*
+2.5 0 Td
+(assumed\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 143.6 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(API owns commands\054 permissions\054 monitoring and administration\056 Production durable work runs in a) Tj
+T*
+2.5 0 Td
+(separate Worker process\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 113.2 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(Admin owns report management and scheduling\073 Portal exposes permission\055approved operational) Tj
+T*
+2.5 0 Td
+(reports\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 82.8 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(Browser\057PDF is normal printing\056 A constrained local agent may later print only receipts\054 queue slips) Tj
+T*
+2.5 0 Td
+(and labels\056) Tj
+T*
+ET
+Q
+Q
+Q
+q
+0.0 0.0 612 792 re
+W
+n
+1 0 0 1 0 0 cm
+BT
+/F1 12 Tf
+14.4 TL
+ET
+BT
+/F1 8.1 Tf
+9.72 TL
+ET
+0.1 0.15 0.22 rg
+BT
+1 0 0 1 194 327.8 Tm
+(Authorized branch administrator\073 no platform approval) Tj
+T*
+ET
+Q
+
+endstream
+endobj
+5 0 obj
+<<
+/F1 6 0 R
+/F2 7 0 R
+>>
+endobj
+6 0 obj
+<<
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding
+/Name /F1
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+7 0 obj
+<<
+/BaseFont /Helvetica-Bold
+/Encoding /WinAnsiEncoding
+/Name /F2
+/Subtype /Type1
+/Type /Font
+>>
+endobj
+8 0 obj
+<<
+/Contents 9 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+9 0 obj
+<<
+/Length 10420
+>>
+stream
+q
+1 0 0 1 0 0 cm
+BT
+/F1 12 Tf
+14.4 TL
+ET
+q
+0.85098 0.886275 0.952941 RG
+0.4 w
+n
+72 48.96 m
+540 48.96 l
+S
+BT
+/F1 8 Tf
+9.6 TL
+ET
+0.356863 0.396078 0.45098 rg
+BT
+1 0 0 1 72 34.56 Tm
+(BOOKDOC2026 \174 Pre\055development Approval Pack) Tj
+T*
+ET
+BT
+1 0 0 1 514.648 34.56 Tm
+(Page 2) Tj
+T*
+ET
+Q
+q
+1 0 0 1 78 712.6 cm
+q
+BT
+1 0 0 1 10 2.6 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+<7f> Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 2.6 Tm
+/F1 9.6 Tf
+12.2 TL
+-2.5 0 Td
+(MAUI starts with patient journeys after stable APIs\073 staff stages follow field validation\056) Tj
+T*
+2.5 0 Td
+ET
+Q
+Q
+q
+1 0 0 1 78 682.6 cm
+q
+0.180392 0.458824 0.713725 rg
+BT
+1 0 0 1 0 3 Tm
+/F2 15 Tf
+18 TL
+(3\056 Clinic onboarding and branch governance) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 651.2 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+(1\056) Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+2.34 0 Td
+(A clinic applicant submits an onboarding form and secured evidence\054 or a platform operator directly) Tj
+T*
+-2.34 0 Td
+(creates the application\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 620.8 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+(2\056) Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+2.34 0 Td
+(The system resolves the current platform\055managed document\055type requirements for jurisdiction and) Tj
+T*
+-2.34 0 Td
+(clinic type\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 590.4 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+(3\056) Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+2.34 0 Td
+(A platform operator reviews evidence\054 records reasons and explicitly approves\054 rejects or requests) Tj
+T*
+-2.34 0 Td
+(resubmission\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 560 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+(4\056) Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+2.34 0 Td
+(Approval provisions the isolated tenant and first owner\073 submission alone creates no active tenant) Tj
+T*
+-2.34 0 Td
+(access\056) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 541.8 cm
+q
+BT
+1 0 0 1 10 2.6 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+(5\056) Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 2.6 Tm
+/F1 9.6 Tf
+12.2 TL
+2.34 0 Td
+() Tj
+T*
+-2.34 0 Td
+ET
+Q
+Q
+q
+1 0 0 1 78 511.4 cm
+q
+BT
+1 0 0 1 10 14.8 Tm
+/F1 10 Tf
+12 TL
+0.121569 0.160784 0.215686 rg
+(6\056) Tj
+ET
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 22 14.8 Tm
+/F1 9.6 Tf
+12.2 TL
+2.34 0 Td
+() Tj
+T*
+-2.34 0 Td
+() Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 475 cm
+q
+0.917647 0.94902 0.972549 rg
+n
+0 30.4 468 -30.4 re
+f*
+0 0 0 rg
+BT
+/F1 10 Tf
+12 TL
+ET
+q
+1 0 0 1 6 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Control\072 Only platform operators may create\054 version\054 activate or retire onboarding document types\056 Files remain in secured) Tj
+T*
+(document storage with validation\054 malware\057quarantine state\054 hashing\054 access audit\054 expiry and replacement lineage\056) Tj
+T*
+ET
+Q
+Q
+q
+1 J
+1 j
+0.85098 0.886275 0.952941 RG
+0.4 w
+n
+0 30.4 m
+468 30.4 l
+S
+n
+0 0 m
+468 0 l
+S
+n
+0 0 m
+0 30.4 l
+S
+n
+468 0 m
+468 30.4 l
+S
+0.180392 0.458824 0.713725 RG
+0.8 w
+n
+0 30.4 m
+468 30.4 l
+S
+n
+0 0 m
+468 0 l
+S
+n
+0 0 m
+0 30.4 l
+S
+n
+468 0 m
+468 30.4 l
+S
+Q
+Q
+Q
+q
+1 0 0 1 78 467 cm
+Q
+q
+1 0 0 1 78 437 cm
+q
+0.180392 0.458824 0.713725 rg
+BT
+1 0 0 1 0 3 Tm
+/F2 15 Tf
+18 TL
+(4\056 Roles and host ownership) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 78 136.2 cm
+q
+0.180392 0.458824 0.713725 rg
+n
+0 293.8 468 -20.2 re
+f*
+1 1 1 rg
+BT
+/F1 10 Tf
+12 TL
+ET
+q
+1 0 0 1 6 278.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Role) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 278.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Primary experience) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 278.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Key outcome) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 278.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Critical restriction) Tj
+T*
+ET
+Q
+Q
+0 0 0 rg
+q
+1 0 0 1 6 253.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Platform operator) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 253.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Control plane) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 248.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+() Tj
+T*
+() Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 248.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(No standing clinical) Tj
+T*
+(access) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 222.9 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Clinic owner\057admin) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 222.9 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Admin \053 permitted Portal) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 222.9 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+() Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 217.8 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+() Tj
+T*
+() Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 192.5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Receptionist) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 192.5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Portal) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 192.5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Patients\054 booking\054 arrival and queue) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 187.4 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Masked clinical\057financial) Tj
+T*
+(fields) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 162.1 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Doctor\057Orthopaedist) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 162.1 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Portal\073 MAUI later) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 157 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Encounter\054 prescription\054 investigation) Tj
+T*
+(and sign) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 157 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Care relationship and) Tj
+T*
+(branch scope) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 131.7 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Physiotherapist) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 131.7 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Portal\073 MAUI later) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 126.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Assessment\054 care plan\054 sessions and) Tj
+T*
+(discharge) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 126.6 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Prescription authority not) Tj
+T*
+(implied) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 101.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Nurse) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 101.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Portal\073 MAUI later) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 101.3 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Vitals\054 queues and assigned tasks) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 96.2 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Signing\057prescribing) Tj
+T*
+(separately granted) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 70.9 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Cashier) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 70.9 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Portal) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 70.9 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Invoice\054 payment\054 receipt and close) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 65.8 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Refund\057discount approval) Tj
+T*
+(separated) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 35.4 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Radiology\057Lab) Tj
+T*
+(technician) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 40.5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Portal) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 40.5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Department worklist and status) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 35.4 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Verification\057release) Tj
+T*
+(separately granted) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 6 10.1 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Patient) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 101 10.1 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 2.1 Tm
+/F1 8.1 Tf
+10.2 TL
+(Patient Portal \053 MAUI) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 216 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Own bookings\054 queue\054 bills and) Tj
+T*
+(released records) Tj
+T*
+ET
+Q
+Q
+q
+1 0 0 1 366 5 cm
+q
+0.121569 0.160784 0.215686 rg
+BT
+1 0 0 1 0 12.3 Tm
+/F1 8.1 Tf
+10.2 TL
+(Self\057approved) Tj
+T*
+(representation only) Tj
+T*
+ET
+Q
+Q
+q
+1 J
+1 j
+0.85098 0.886275 0.952941 RG
+0.4 w
+n
+0 293.8 m
+468 293.8 l
+S
+n
+0 0 m
+468 0 l
+S
+n
+0 0 m
+0 293.8 l
+S
+n
+468 0 m
+468 293.8 l
+S
+n
+0 273.6 m
+468 273.6 l
+S
+n
+0 243.2 m
+468 243.2 l
+S
+n
+0 212.8 m
+468 212.8 l
+S
+n
+0 182.4 m
+468 182.4 l
+S
+n
+0 152 m
+468 152 l
+S
+n
+0 121.6 m
+468 121.6 l
+S
+n
+0 91.2 m
+468 91.2 l
+S
+n
+0 60.8 m
+468 60.8 l
+S
+n
+0 30.4 m
+468 30.4 l
+S
+n
+95 0 m
+95 293.8 l
+S
+n
+210 0 m
+210 293.8 l
+S
+n
+360 0 m
+360 293.8 l
+S
+Q
+Q
+Q
+q
+1 0 0 1 78 128.2 cm
+Q
+Q
+q
+0.0 0.0 612 792 re
+W
+n
+1 0 0 1 0 0 cm
+BT
+/F1 12 Tf
+14.4 TL
+ET
+BT
+/F1 8.3 Tf
+9.96 TL
+ET
+0.1 0.15 0.22 rg
+BT
+1 0 0 1 102.3 542.4 Tm
+(Authorized branch admins manage allow\055listed branding and numbering with scope\054 version and audit controls\056) Tj
+T*
+ET
+BT
+/F1 9.6 Tf
+11.52 TL
+ET
+0.1 0.15 0.22 rg
+BT
+1 0 0 1 102.3 524.2 Tm
+(Provider\057legal verification gates domains and communication identities\073 no BOOKDOC platform) Tj
+T*
+ET
+BT
+1 0 0 1 102.3 512 Tm
+(approval is required\056) Tj
+T*
+ET
+BT
+/F1 8.1 Tf
+9.72 TL
+ET
+0.1 0.15 0.22 rg
+BT
+1 0 0 1 294 395 Tm
+(Approve tenants\073 manage document) Tj
+T*
+ET
+BT
+1 0 0 1 294 384.8 Tm
+(types\073 monitor verification) Tj
+T*
+ET
+BT
+/F1 8.1 Tf
+9.72 TL
+ET
+0.1 0.15 0.22 rg
+BT
+1 0 0 1 294 364.6 Tm
+(Configure and govern own) Tj
+T*
+ET
+BT
+1 0 0 1 294 354.4 Tm
+(tenant\057branches) Tj
+T*
+ET
+BT
+/F1 8.1 Tf
+9.72 TL
+ET
+0.1 0.15 0.22 rg
+BT
+1 0 0 1 444 364.6 Tm
+(No tenant activation or) Tj
+T*
+ET
+BT
+1 0 0 1 444 354.4 Tm
+(platform catalog control) Tj
+T*
+ET
+Q
+
+endstream
+endobj
+10 0 obj
+<<
+/Contents 11 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+11 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ]
+/Length 2831
+>>
+stream
+Gb!;eD0+IQ%K>d&JWK6LHkf4MaX8IM>j`MkQ!!EZB0)5ZO\9F&P0;T+Xf0\j?XW[Rg6#sY<BKSYP0hD6!Xh*j*l&i,pr>2j-7-Hs'fbYEn9e>Li!"9(Wt4^[lKn7$3tC(8%!EU\r]C=1&c.F$K24_&iMQ!F"`kc;fNpsB65[62Eria_rL#A\\Zhk.7!f\=EARcE[YW^!*ZUR=<DNG)?7e9\(>'dZ;o8@"S!uWJh7WDd5D"C#;K45KGJ'#[af>UulWVCl<kskE?iL,,0<k;(j@i;VnNp(a:QA\cSAT0Kq]js>'HY0INU.Jk6hg=aGII!4cT(V#YijkZmY;;eG%!iF47@Rd6=[p#mX$#/E*Mp%YbKf:Xa&))CP8eWM1-R0MZ&kKp[)o6Dk8b[L/Ga=j^tEECc5P'H?W>/i7e/Qg%W?s!ObL)6HSk0*.9Jch?im:(M>#N2j.5]%XPcLs46ZH[AY41G?ehnQ"]Y%0Whn:jN7k/RA_+EWgm9KZV!fTEce($PrBXi<=2l5-+&OOY*nF+W49PYY&p7.<bRCtUl[858mSY.80!)Q00gm(T!eg:m>Z\>ZjPpT.o_,-94cP71<)s'W&@_6cl@H]F2c:Y0ZEdd)r4DCk;/BE8+DNg`<t@MP-C7Fr3i]k:afQ(5_TbMJ4ebQ$!otEGbm\4IOA$"-/:]L/2,^=ledJS%l^NAaI;Wu,l3nd0_-pi?\FTqJjAiZi<69J["[":H,1H,d73=hWh$CSs2IZ.or_KAF9bu+gq5+=K>oK2Zb$3k%aPKJ:Rie)QA[5:7!6Om,B@i08<ooJk];G1i7eY3.Ea6@"X9`f_t:5qNtEcQ"I()1e^GXn!<IP(F>64oeLa*Um@90c[@eHJHTQc$U6&T[X_kQfnVW3dXBKAoeKK^2*nQ3XL>^f:15_8edOMp);$_l3Oj9!qD]T('bjN<a73!lj4i)a*=HW>_oQLkc@$rC]+oC6B290g!2Pn=Y]K-gg5u%RAbJ8_NQjmG[0n%HSD@`%]1.@Q"=0U[!RS?hp;Z%QKb`[Y2%E$Q/pr@'")GN)@lN3G&()6e]X9g*)O_p<'P!^I*6#KXWl_4qbNF/#=GKF>-pSgSpJi2Gi4!E..M/JNm[)abL'uQi/FuaD1.,)1T/II/+%LTn,.qhPoIr>K6FNlV@-HSNGL3uZ`L]$oTrr)D0JaOO\)Aei4Wm6m7GIQem>B-R1]%7J,I4X9;bkOCJoA]lHH?2F(K@M*9T;$?r2LOMl<"6G)!e-F"CS)M[,q<(\(0EBmklOU]pHlV&/=uq!"dV):@GG]-0XSK\LHgO''2*FhD!/[QPJ[4%H>mBTp*W&3dCfKs,Q2mgoR!nNQ[1!XTVt)F!%tPC5&0ogeC%Asc5T;/J`pUFbn!T%q#erG6?T*?jBsCU5RJQ4,4J@0`%C,Cp)t4h'E:3C,@Q$E-TE=E%C.<STRG<1F8$l)0ju(ociJ@ZC.uQJ8(ef=mKTH"5RR'#/see,=KWU7N`BK@Jl#Lp*ORgo0l<+'a$5(5)?r=,LILZBATGc^=!2BZ&Qci\Zsfrh3i$4^E24Ij2(`JNdZKd#e3]%H/B'oJQ*j"(Q9="V(poj`lV#-7p,;nFA;#B!]f;Fm0teY2=;8J+SrWX.rTa4][=K@/>[G+UJDWQGral`6p@^/C#>Hc$G285e`G1;k01D0gP!R%H'(n_K+H`;#^)KCNapL.8`MF(U,42`R$::bJ,st"*YT7a5%=a%=#'W`IL88Gb=]/Y:,VhY2%543o!gB%+"KXWCE5L7!?2b7g@=<PI?Tj]?.ottqC``&Cn@Vp!dNCU5O\\+&'fW+*`!8U5K,g@r5W7@lZIhE#SIF8OMHI//ZV8^JTJPp-Luni;e#NE([!%3%&s5\s+C2tsY4'Fc+5KSjXIoD1L!N?Hq$d&V?LNR<StMPB8Xlb>8o?M`J':QI$)O-C^iCoDZ7:$]Efk<<2i]LYm1aB]+*R]NjFmBcA/Pi(Ybu7%JpMEagaZIgelj5Cc%Kb0e'N1TYrmq&S^M:TVOp)/P%SuTe/39:&3W2,472c9>Gp_P?2r9TS*/aikngoIk&FK^m6S4!*f'F+I9kX-&l3Z?_etV9T4mH]p[ImW#C="MmiL][r.TKThJR5KcW)H^8M!rUfSJ_9B)Pm%;Sr7Zm&NU]$`u>)*"H&nX!M!tNUr!!r<6H?\[mOiS/'9QY->p`26/DZ%I[OoMumO65JI.#8Cac*WDl53ec'`%3;dm1,!m\H_M@*&`kI03(:[+rhX2tH,oPsNd$oJ23us,*Sn!d]r=fZWV@t9"<-(h_f0XYUZGP<N9ehO9KKJL#'If#*\l#FEX#2(%M6a__RiZ/b:bb'5$>b:)TiaNslZeU&BXL^+Q<CPj3QbA:`.I9O<G($TM7i$A6O)aEL:'jif-$OMMb5mP4;0"t&e^4P0VbUdM$_1\O]^AZ'%Onc'YC-X1uFi5b\H-e6@"+I4TM@-o&B_%o=oSB\Ih<G0mOP]I/fe2#=u2"lTs2QS6p?br3aG1_&+ZiLTb+71pqeo38<iO/of([cK1TK.VB`/3@nkq[%UJ5mKD-:.WUtc>0&KViPS8"TiO=b3d[RQ9UMEm1>&p(Um5<CI/EN%lfR62O*C50=)U8A8B1\:?([/,=5VbDYW?!dj^<%%'>MJZ+C`X9*;I&ach_IZ^\bZUaWg3jCqd,`2k('<AB$>M-EbOT1s##Ec&Psb%#75ohl=C2rE"q=On6(W]8Y5Y'baec5c>]UU-3*M,M=O5*j""r3T_QEOA"JYkCA2^nUpk"5jjSPn!ACj<jkQZM^(bS@Oncsh>9WqM0Jf%6JXShf'jmJ,X&p[SGa+@8C;5~>
+endstream
+endobj
+12 0 obj
+<<
+/Contents 13 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+13 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ]
+/Length 2427
+>>
+stream
+Gau`V968iG&AJ$Cm*SNRMVq-<Db8`+dO)6YBVr>W,UB'1#o08s\C2PW?'(d,4!s1r9uiG',![]`qs@Sr>l8*os0McN[=m3P#0__]$<Z3hY^?[?0@0V[F5kP@@W:<do&_)T8a%H$K<&A)E7+&U$$-W/fL[88+:R%KSAV82G0cPa9Ur';dIG+&NdPgD,]`(XEFALlCKf'<A)X#.i.Ul#!U$X=07UUDI-nIN"Fn<UMeOO3,$3McPVp,/DRJ3i*#:ZMq#Qe2_"%ZV3SH('$Um@/[,lnC"U%>r5N5C!i\A[5aGH$6FFP(<IcAa8j4FaTR59?\Kb"[[Jkm?3hKZh&_o%l0HQG9<[b0_oNll.:9$i0&Z4p;]6N$r`^l8PtQak[@Hou$Q`A$sia2?/1o`@'mOs"c7XghLNi0h6gO"puhR//F-Y&@n0j&VpU1(V-[=ik+`(Q;N8Nhai]2Y'$<)gS!q*I/S[s(ESS25i4/j;Jk[SK])m)keZhVj"=)_C,G?OYWSWl"_8%6C6l>#%+<)1rPqVh?:)jGV+6GjFii`rOeJb-rY]krc9HpaIX[Fq6obgHD`VL]b]-NYFd*,]>!rRIh5t%i$mp[PB6nf=f2$%XiBe&WGp+O\B>2W6Jq=8dCkWAWqJd:%3Q%\^%XX`BJTL`W4nIB!EH]C"ePcJ<I%Ze^I/8@-Q>*,SE7BrW>:9ke_&B#!*\L-#?=,7#*EP`k2ga1AI4XUC",2kWa@srXWHD#Y0rd\4\$iGSs.e/]h!?Nep"I&Q@#25@?Ab&IJ('ZE4J7FNC$[6a=!)>RSR"q\qP`S-W#_aQ_!cpAYjF"^^48%Hm@#kmA7>[a.lX8NPqStR_04!9ne$WN%m<!8pL0sU'H<%naNQeBIu,dPuREGBYGJe+H,D""]tk7'@<K(Ws)ZiFRI\\&A6_jcU41hiPH(S.Bg\=![+l'A]d!>fqiu%6drLZWT8>Q#Id=_<#`747@i6:%%o5I=07m:?/t%VaCO"k*tXXRq0rB)nV%cmF]BnH`7mtDQ-^Fj/&Y]u3Xfgpi6EfV7cM]Cc$t@-Ws9KWSJOFJbj7^4"o>cFPj5?3CX%o&>YfIli6^mP(0[gcL3fM196;d*M,"jMmoGb?l3)fEUoI+"/r(Z:jtl1gb4=q%Zq@[d$KMmCB<A-/TkK_jDudsaAhi6A*OSW*Ic)N7e]^C^1!kTB=#V8F4m&,(h\gWr0WVV(F)d.%oZO55ks-RF\K8PY<Si\QT2h=u4-!9,mj2Qh`2N[^cgD,9NT&[#(hI$1XjZlmqi*q33CaY[(a-"YZ#d<:fKOr%[E:5Yl]=&mr"7eeEap*Elj@,j<DjG2UcGV.\WU[APpa4I4[MBg!nUn+H+Cm.K5NVu3'Xd<A6^]=B33:"$(89P'\1XD$)!Ss8lnN:QJL-5JY5OT\$mPLfX&_hES.V@R+I3f9sjtDO:0ArG%;F"<kY4O,[0<G5SWG9N-Hf*2jN2KQT[7H_"!gOm&ddbU<;h+o.o.G=t;RZ\Tg3r]1ge^dqIZeel>u[]WU?!K^UTRdo;AJoXu"hJ#YNnhl7G1ef8\OgO@b)o<igrVk_"6n_YG+*Pt19W\C!DAkWZNdSOkR\gL;/P?#m*fA:D6>4%7dG;H+Qe]sP%2e/:Wm>Mo)Ast&H1Xh;pRIIEsNOl$b"k>dqj26gi3AhI^G^+*e9[.W74?PQNUuo3*2UCPc`h86Z_=>c5^YoiSSifg2m46HFKSuq"0o`g5q8^P#7mA`%c,6HAQ%iu3:oP0#(sT6=UQK+7^@ZP7IK0-=AUnu?Z#'9^e;!:h])o[9-6k^fO6kggf/FS%?'oD.UhO!H>a?,S\@g@=C,KDm<V!gk4]L,9g1uE2X'<eC9n`R34#;S*.p"j8.l]N96Of`Glje>HrR?%>(<6+*Xg]%hk&eYaXl.T4a_+\>H;)?%p@;!`B\+lQ`D1>O?V\i3dX.a2_&m"PX*m"ORJ?`!+f8=8s-;$ZC5S+A/i@7;r*&6gmYT@slc#VLQ&BBdn4g"t*9s;o;:hV<%kTMK4=T9KLo6VW%Xrm$l19*LA/pNn]rA)qiLs_M&_Kp[8[>X*kEri@b<1ghYe7s-,1T#E9kTBa8ruWnhrYhuJ`:Y(B"h!\Nhkj,4]H^/\B`.s[ZT<p0Wjni5aYSn_IH_XE,#N#H(Q@T0Sb,06fPIV3&'?^1F!/f'&[I2=W*3fTPLYu.mj.\b.Z<)Cc.A"am-,bpF>&84dCF.TN.QnaNnTJFo4&$Ys0FZ/3g1*10u5EH`8>ATOQn[X]?8q'F!qs[Rh0V1LK4fBDAa<c&7K=h^e5E.#go@"E)Vj86/OU;PtI:MmV>Tl93qW1m1G=1U650r#6IXf..SoRIMFOSTRhUNuH=*2s"LCT\*j.Aiu<9*NqNL`D5=iIrZg\D)3@0_)YYF+*RS[/(kC?h+!;dT#')E[9:d,~>
+endstream
+endobj
+14 0 obj
+<<
+/Contents 15 0 R
+/MediaBox [ 0 0 612 792 ]
+/Parent 2 0 R
+/Resources <<
+/Font 5 0 R
+/ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>>
+/Rotate 0
+/Trans <<
+>>
+/Type /Page
+>>
+endobj
+15 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ]
+/Length 1605
+>>
+stream
+Gb!#]9lo&I&A@sBm*X)!1dU['==6fjD'sK>*IE@ZQ&M(5=FcS#:4IX-J0[dFoejXk)36@_\\uBL4Fl?GK91PLqcbrY2\W]Mc[\G<R0&;!(aaaJ09_=//qQ1lM]@=2:STIlTLbe$B(5WJ$VG`VOH;mBk<Y4s"%aIbgGOAh=SA0;/rLiXp)&aP1f).'N/KO:W8lP'Y@fbc/VccCNoM7UHQ'E,\\7t?h<irFN)KEemPJ6M\A2:U%E]00DHj4Y]S8LS55k\KY:t63EAi,9W1Yum2nHZ^1PB9`q\)u@#1"G#di^#ID#Gmqa$jOZRHIEU6,poIPjAf<KX'q>qL&JtE?+,LhFeUg0-etK.U?nbmbjsF6EDeZ,F5,/"O,:^\Fs^0IY1;$jW9k9Q3fV[,)<m%/sVq6h&,>s&DERG.HCp*\\VH?">23<;)c?/Td4a&hTuQh8#V(ieH5EM:X[m9bra&Ti'Ra763C,.X-t[:]R*IYr.?,\[RN>G/pg!qWbPko2H7?Lcqpq>nd$!Z/#Ar1lgfTr"Os$BX'.&.35eh6Z4l@kg@U%10l`Z"<>6'')I`Js\dF>)#jJMI-]UcQCs6PoZLEN@`[Kf1b^uCMQA%Wm'#u.)iBUilSiB,^rL64Pj$i$0I-;<O?LKD!;rSua=,^"l<a*^aPBm_*>5YI:gcM&qhe4*WZQG0<ID`b9;V7hP(G\Tcc]DMP9_*'rZ[*(j&/E>#Bo]*iD/8T*i\9f4G2DW'L$h.i@nTQJV*"N?^%9tbW$dGuTWWTpS_Uk>/?<+)r;LPG=ORtRrNkeM2-?PI6\D)/Fr'rVH:uRG;:6-*n0rP,a5tbpp+bt,#^)GP"tJ$#Ag"#dkT#l^#5):nDKj^-@d+X#Qs=q@4%h8[Q"_O#(`8eTcTceI_0Gtn8h>5_HsPckfBWOEV&,a6b:![LA2"no$?h_o"tS0FBJ?Y)U86*[!50)'%SM#o41YIc$@PT.rRQ7SEX"&C.VCFh>)U)QgsYN$Hgs#775Nk.o07(K_sK5:)<j*VrHd7^>?N#,1Hg-?3c`Xlqe3JS$+I5<p"/X*rlFYfCTjp$5@f&Y[9$E:[L?)E'm!uBO1OI'm^ruNGKj.C3>asJRQb'Q_&(k$B:0:bccp^!,VEt!2riI=Z#SslXQ,pZELan_T1*q_ELr]d(.RpQ>5<lT4a"KtNb;E"[tG:&?u_V=b<tq,!4)sq8m@c+c[KTFje"*I*1"!H:QfZ2D;sp7O&rbDK!)&N\cu'>[J"KQ<BajqoMB<3Xknd?$+,B)II3"b:(KC'N0m2Z]#UeEn(e'Q%2H<".r4u>o^YfBpG`i7XBi\#hQ'&``ThR>!u(?)D&T7I7U*%R[2D8'qmiib]?&!43L>uGbDqCq^H5.Aj6<To$?^+<ma]r>,<DZn:LoD!YOT#73.G#H%QN2^N4jYtEe_S7CJ*.:#Wf>rCX44Z/XF<q^#o4$r=P^e7)M*.ltNQKqTUf4R(!fY3lW(U3n,BHQjMODL94+He*.PeohS1EhCJ84%bfIn4F_dQra:,&f^eEr9+7&dT8=Mhk-G<5O[`X`M8hOOr5&Wts#YaqbP_OSHEea!9J'S0aVVa>?9ZqT[S%ZHr!*D##]f~>
+endstream
+endobj
+16 0 obj
+<<
+/Author (BOOKDOC2026 Planning Team)
+/CreationDate (D\07220260809165432\05305\04700\047)
+/Creator (\050unspecified\051)
+/Keywords ()
+/ModDate (D\07220260809165432\05305\04700\047)
+/Producer (ReportLab PDF Library \055 \050opensource\051)
+/Subject (\050unspecified\051)
+/Title (BOOKDOC2026 Pre\055development Approval Pack)
+/Trapped /False
+>>
+endobj
+xref
+0 17
+0000000000 65535 f 
+0000000015 00000 n 
+0000000083 00000 n 
+0000000169 00000 n 
+0000000358 00000 n 
+0000008971 00000 n 
+0000009012 00000 n 
+0000009119 00000 n 
+0000009231 00000 n 
+0000009420 00000 n 
+0000019893 00000 n 
+0000020084 00000 n 
+0000023008 00000 n 
+0000023199 00000 n 
+0000025719 00000 n 
+0000025910 00000 n 
+0000027608 00000 n 
+trailer
+<<
+/Size 17
+/Root 1 0 R
+/Info 16 0 R
+/ID [ <cf8eceb34a648a31b2a33b29cba0b54d> <cf8eceb34a648a31b2a33b29cba0b54d> ]
+>>
+startxref
+27968
+%%EOF

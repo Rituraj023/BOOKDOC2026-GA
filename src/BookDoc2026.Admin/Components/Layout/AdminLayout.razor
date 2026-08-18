@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AdminSessionState Session
+@inject AuthApiClient Auth
+@inject NavigationManager Navigation
+
+<header class="topbar">
+    <a class="brand" href="/">BOOKDOC2026 Admin</a>
+    <nav>
+        @if (Session.IsAuthenticated)
+        {
+            <a href="/">Home</a>
+            @if (CanViewCommunications)
+            {
+                <a href="/communications">Communications</a>
+            }
+        }
+    </nav>
+    <div class="session-nav">
+        @if (Session.IsAuthenticated)
+        {
+            <span>@Session.Session!.DisplayName</span>
+            <button @onclick="SignOutAsync">Sign out</button>
+        }
+        else
+        {
+            <a href="/login">Sign in</a>
+        }
+    </div>
+</header>
+<main class="shell">@Body</main>
+
+@code {
+    private bool CanViewCommunications => AdminPermissionPolicy.CanAccessCommunications(Session.Permissions);
+
+    protected override void OnInitialized() => Session.Changed += OnSessionChanged;
+
+    private void OnSessionChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task SignOutAsync()
+    {
+        await Session.SignOutAsync(Auth);
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose() => Session.Changed -= OnSessionChanged;
+}

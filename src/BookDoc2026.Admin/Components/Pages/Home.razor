@@ -1,0 +1,22 @@
+@page "/"
+
+<h1>BOOKDOC2026 Admin</h1>
+<ScopeBadge Label="Restricted ERP administration" />
+<p>This network/IP-restricted host owns tenant approval, identity, roles, permissions, configuration, reporting, imports, exports and monitoring.</p>
+@if (Session.IsAuthenticated)
+{
+    <p>Signed in as <strong>@Session.Session!.DisplayName</strong> with @(Session.Permissions.Count) permissions.</p>
+    @if (CanViewCommunications)
+    {
+        <p><a class="primary-link" href="/communications">Open communication management</a></p>
+    }
+}
+else
+{
+    <p><a class="primary-link" href="/login">Sign in to Admin</a></p>
+}
+
+@code {
+    [Inject] private AdminSessionState Session { get; set; } = default!;
+    private bool CanViewCommunications => AdminPermissionPolicy.CanAccessCommunications(Session.Permissions);
+}

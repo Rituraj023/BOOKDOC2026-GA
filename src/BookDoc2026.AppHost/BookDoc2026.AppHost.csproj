@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.2.4" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>bookdoc2026-apphost</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.4.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BookDoc2026.Api\BookDoc2026.Api.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Admin\BookDoc2026.Admin.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Portal\BookDoc2026.Portal.csproj" />
+  </ItemGroup>
+</Project>

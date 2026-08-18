@@ -1,0 +1,78 @@
+@page "/login"
+@inject AdminSessionState Session
+@inject AuthApiClient Auth
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in | BOOKDOC2026 Admin</PageTitle>
+
+<div class="login-shell">
+    <section class="panel login-panel">
+        <p class="eyebrow">Restricted administration</p>
+        <h1>Sign in</h1>
+        <p>Use your BOOKDOC2026 account. Tokens remain in this server-side Admin circuit and are not written to browser storage.</p>
+        @if (Session.IsAuthenticated)
+        {
+            <p class="notice">Signed in as @Session.Session!.DisplayName.</p>
+            <button class="primary" @onclick="Continue">Continue</button>
+        }
+        else
+        {
+            <div class="login-form">
+                <label>Email<input type="email" autocomplete="username" @bind="email" /></label>
+                <label>Password<input type="password" autocomplete="current-password" @bind="password" /></label>
+                <details>
+                    <summary>Select a non-default clinic scope</summary>
+                    <div class="form-grid scope-fields">
+                        <label>Tenant ID<input @bind="tenantId" /></label>
+                        <label>Organization ID<input @bind="organizationId" /></label>
+                        <label>Branch ID<input @bind="branchId" /></label>
+                    </div>
+                </details>
+                <button class="primary" @onclick="SignInAsync" disabled="@busy">@(busy ? "Signing in…" : "Sign in")</button>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <p class="notice error-notice">@message</p>
+        }
+    </section>
+</div>
+
+@code {
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private string? tenantId;
+    private string? organizationId;
+    private string? branchId;
+    private string? message;
+    private bool busy;
+
+    private async Task SignInAsync()
+    {
+        busy = true;
+        message = null;
+        try
+        {
+            await Session.SignInAsync(Auth, new LoginRequest(
+                email, password, EmptyToNull(tenantId), EmptyToNull(organizationId), EmptyToNull(branchId)));
+            password = string.Empty;
+            Navigation.NavigateTo("/");
+        }
+        catch (RemoteErrorException exception)
+        {
+            password = string.Empty;
+            message = exception.Error.SafeMessage;
+        }
+        catch (Exception)
+        {
+            password = string.Empty;
+            message = "Sign-in could not be completed. Try again or contact support with the current trace information.";
+        }
+        finally { busy = false; }
+    }
+
+    private static string? EmptyToNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private void Continue() => Navigation.NavigateTo("/");
+}

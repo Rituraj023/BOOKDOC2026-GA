@@ -1,0 +1,357 @@
+@page "/communications"
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject AdminSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Communications | BOOKDOC2026 Admin</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to access communication administration.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else
+{
+@if (!CanAccessWorkspace)
+{
+    <section class="panel"><h1>Access not granted</h1><p>Your account does not have a communication-management permission.</p></section>
+}
+else
+{
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Administration / Communications</p>
+        <h1>Templates and delivery monitoring</h1>
+        <p>Manage versioned branch overrides and inspect safe delivery metadata. Publishing is separately authorized.</p>
+    </div>
+    <ScopeBadge Label="Branch-scoped" />
+</div>
+
+<section class="panel branch-selector">
+    <label for="branch-id">Protected branch ID</label>
+    <div class="inline-form">
+        <input id="branch-id" @bind="branchId" placeholder="Paste the protected branch ID" />
+        <button class="primary" @onclick="LoadAsync" disabled="@busy">@(busy ? "Loading…" : "Load workspace")</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="notice">@message</p>
+    }
+</section>
+
+@if (CanViewPreferences || CanManagePreferences)
+{
+<section class="panel">
+    <div class="section-heading">
+        <div><p class="eyebrow">Stakeholder-owned evidence</p><h2>Communication preferences</h2></div>
+        <span class="muted">Every change creates a new evidence event</span>
+    </div>
+    <div class="form-grid">
+        <label class="wide">Protected stakeholder ID<input @bind="preferenceStakeholderId" placeholder="Paste the protected stakeholder ID" /></label>
+        <label>Purpose code<input @bind="preferencePurpose" /></label>
+        <label>Message class<select @bind="preferenceMessageClass"><option>Transactional</option><option>Clinical</option><option>Marketing</option></select></label>
+        <label>Channel<select @bind="preferenceChannel"><option>Email</option><option>Sms</option><option>WhatsApp</option><option>Push</option></select></label>
+        <label>Decision<select @bind="preferenceDecision"><option>Allowed</option><option>Denied</option><option>Withdrawn</option></select></label>
+        <label>Quiet start<input @bind="quietStartText" placeholder="21:00" /></label>
+        <label>Quiet end<input @bind="quietEndText" placeholder="08:00" /></label>
+        <label>Time zone<input @bind="preferenceTimeZone" /></label>
+        <label>Evidence source<input @bind="preferenceEvidenceSource" /></label>
+        <label class="wide">Evidence reference<input @bind="preferenceEvidenceReference" placeholder="Consent form or interaction reference; do not enter clinical notes" /></label>
+    </div>
+    <div class="actions">
+        @if (CanManagePreferences)
+        {
+            <button class="primary" @onclick="RecordPreferenceAsync" disabled="@busy">Record preference event</button>
+        }
+        @if (CanViewPreferences)
+        {
+            <button @onclick="LoadPreferencesAsync" disabled="@busy">Load history</button>
+        }
+    </div>
+    @if (preferences.Count > 0)
+    {
+        <div class="table-wrap"><table>
+            <thead><tr><th>Recorded</th><th>Purpose</th><th>Class</th><th>Channel</th><th>Decision</th><th>Quiet hours</th><th>Evidence</th></tr></thead>
+            <tbody>@foreach (var preference in preferences)
+            {
+                <tr><td>@preference.RecordedUtc.ToLocalTime().ToString("g")</td><td>@preference.PurposeCode</td><td>@preference.MessageClass</td><td>@preference.Channel</td><td>@preference.Decision</td><td>@QuietHours(preference)</td><td>@preference.EvidenceSource / @(preference.EvidenceReference ?? "—")</td></tr>
+            }</tbody>
+        </table></div>
+    }
+</section>
+}
+
+@if (CanManageTemplates)
+{
+<section class="panel">
+    <div class="section-heading">
+        <div><p class="eyebrow">Version control</p><h2>Create a branch override</h2></div>
+        <span class="muted">Draft → preview → publish → retire</span>
+    </div>
+    <div class="form-grid">
+        <label>Template key<input @bind="draftKey" placeholder="Appointment.Confirmed" /></label>
+        <label>Channel<select @bind="draftChannel"><option>Email</option><option>Sms</option><option>WhatsApp</option><option>Push</option></select></label>
+        <label>Culture<input @bind="draftCulture" /></label>
+        <label>Content kind<select @bind="draftContentKind"><option>PlainText</option><option>Html</option></select></label>
+        <label class="wide">Subject (email only)<input @bind="draftSubject" /></label>
+        <label class="wide">Body<textarea rows="7" @bind="draftBody" placeholder="Hello {{PatientName}}"></textarea></label>
+    </div>
+    <button class="primary" @onclick="CreateAsync" disabled="@busy">Create next branch version</button>
+</section>
+}
+
+@if (CanViewCallbacks)
+{
+<section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">Inbound reconciliation</p><h2>Provider callbacks</h2></div><span class="muted">Verified, deduplicated and processed by Worker</span></div>
+    @if (callbacks.Count == 0)
+    {
+        <p class="empty">No verified provider callbacks are available for this branch.</p>
+    }
+    else
+    {
+        <div class="table-wrap"><table>
+            <thead><tr><th>Received</th><th>Provider</th><th>External event</th><th>Delivery</th><th>Inbox</th><th>Error</th></tr></thead>
+            <tbody>@foreach (var callback in callbacks)
+            {
+                <tr><td>@callback.ReceivedUtc.ToLocalTime().ToString("g")</td><td>@callback.ProviderCode</td><td>@callback.ExternalEventId</td><td>@callback.DeliveryStatus</td><td>@callback.InboxStatus</td><td>@(callback.ErrorCode ?? "—")</td></tr>
+            }</tbody>
+        </table></div>
+    }
+</section>
+}
+
+@if (CanViewTemplates)
+{
+<section class="panel">
+    <div class="section-heading">
+        <div><p class="eyebrow">Effective catalog</p><h2>Message templates</h2></div>
+        <span class="muted">Inherited templates are read-only here</span>
+    </div>
+    @if (templates.Count == 0)
+    {
+        <p class="empty">Load a branch to view its effective template catalog.</p>
+    }
+    else
+    {
+        <div class="table-wrap"><table>
+            <thead><tr><th>Key</th><th>Scope</th><th>Channel</th><th>Culture</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            @foreach (var template in templates)
+            {
+                <tr>
+                    <td>@template.Key</td><td><ScopeBadge Label="@template.Scope" /></td><td>@template.Channel</td>
+                    <td>@template.Culture</td><td>v@template.Version</td><td>@template.Status</td>
+                    <td class="actions">
+                        <button @onclick="() => SelectPreview(template)">Preview</button>
+                        @if (CanPublishTemplates && template.Scope == "Branch" && template.Status == "Draft")
+                        {
+                            <button @onclick="() => PublishAsync(template)" disabled="@busy">Publish</button>
+                        }
+                        @if (CanManageTemplates && template.Scope == "Branch" && template.Status == "Published")
+                        {
+                            <button @onclick="() => RetireAsync(template)" disabled="@busy">Retire</button>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    }
+</section>
+}
+
+@if (CanViewTemplates && previewTemplate is not null)
+{
+    <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow">Safe preview</p><h2>@previewTemplate.Key v@previewTemplate.Version</h2></div></div>
+        <label>Placeholder values (one <code>key=value</code> per line)<textarea rows="5" @bind="previewValues"></textarea></label>
+        <button class="primary" @onclick="PreviewAsync" disabled="@busy">Render preview</button>
+        @if (preview is not null)
+        {
+            <div class="preview"><strong>@preview.Subject</strong><pre>@preview.Body</pre></div>
+        }
+    </section>
+}
+
+@if (CanViewDeliveries)
+{
+<section class="panel">
+    <div class="section-heading"><div><p class="eyebrow">Operations</p><h2>Recent delivery attempts</h2></div><span class="muted">Masked destinations and safe error codes only</span></div>
+    @if (attempts.Count == 0)
+    {
+        <p class="empty">No delivery attempts are available for this branch.</p>
+    }
+    else
+    {
+        <div class="table-wrap"><table>
+            <thead><tr><th>Attempted</th><th>Template</th><th>Channel</th><th>Provider</th><th>Recipient</th><th>Status</th><th>Error</th></tr></thead>
+            <tbody>@foreach (var attempt in attempts)
+            {
+                <tr><td>@attempt.AttemptedUtc.ToLocalTime().ToString("g")</td><td>@attempt.TemplateKey v@attempt.TemplateVersion</td><td>@attempt.Channel</td><td>@attempt.ProviderCode</td><td>@attempt.RecipientHint</td><td>@attempt.Status</td><td>@(attempt.ErrorCode ?? "—")</td></tr>
+            }</tbody>
+        </table></div>
+    }
+</section>
+}
+}
+}
+
+@code {
+    private string branchId = string.Empty;
+    private string draftKey = string.Empty;
+    private string draftChannel = "Email";
+    private string draftCulture = "en-IN";
+    private string draftContentKind = "PlainText";
+    private string? draftSubject = string.Empty;
+    private string draftBody = string.Empty;
+    private string previewValues = string.Empty;
+    private string preferenceStakeholderId = string.Empty;
+    private string preferencePurpose = "Appointment.Reminder";
+    private string preferenceMessageClass = "Transactional";
+    private string preferenceChannel = "WhatsApp";
+    private string preferenceDecision = "Allowed";
+    private string quietStartText = "21:00";
+    private string quietEndText = "08:00";
+    private string preferenceTimeZone = "Asia/Kolkata";
+    private string preferenceEvidenceSource = "StaffRecorded";
+    private string? preferenceEvidenceReference = string.Empty;
+    private string? message;
+    private bool busy;
+    private List<MessageTemplateResponse> templates = [];
+    private List<MessageDeliveryAttemptResponse> attempts = [];
+    private List<CommunicationPreferenceResponse> preferences = [];
+    private List<ProviderCallbackInboxResponse> callbacks = [];
+    private MessageTemplateResponse? previewTemplate;
+    private MessageTemplatePreviewResponse? preview;
+
+    private bool CanAccessWorkspace => AdminPermissionPolicy.CanAccessCommunications(Session.Permissions);
+    private bool CanViewTemplates => Session.HasPermission(FoundationPermissions.MessageTemplatesView);
+    private bool CanManageTemplates => Session.HasPermission(FoundationPermissions.MessageTemplatesManage);
+    private bool CanPublishTemplates => Session.HasPermission(FoundationPermissions.MessageTemplatesPublish);
+    private bool CanViewDeliveries => Session.HasPermission(FoundationPermissions.MessageDeliveriesView);
+    private bool CanViewPreferences => Session.HasPermission(FoundationPermissions.CommunicationPreferencesView);
+    private bool CanManagePreferences => Session.HasPermission(FoundationPermissions.CommunicationPreferencesManage);
+    private bool CanViewCallbacks => Session.HasPermission(FoundationPermissions.ProviderCallbacksView);
+
+    private async Task LoadAsync() => await RunAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) throw new InvalidOperationException("A protected branch ID is required.");
+        if (CanViewTemplates) templates = (await Api.ListMessageTemplatesAsync(branchId)).ToList();
+        if (CanViewDeliveries) attempts = (await Api.ListMessageDeliveryAttemptsAsync(branchId)).ToList();
+        if (CanViewCallbacks) callbacks = (await Api.ListProviderCallbacksAsync(branchId)).ToList();
+        message = $"Loaded {templates.Count} templates, {attempts.Count} attempts and {callbacks.Count} callbacks.";
+    });
+
+    private async Task CreateAsync() => await RunAsync(async () =>
+    {
+        await Api.CreateMessageTemplateVersionAsync(branchId, new(
+            draftKey, draftChannel, draftCulture, draftContentKind, draftBody, draftSubject));
+        draftBody = string.Empty;
+        await LoadDataAsync();
+        message = "A new branch-scoped draft version was created.";
+    });
+
+    private void SelectPreview(MessageTemplateResponse template)
+    {
+        previewTemplate = template;
+        preview = null;
+    }
+
+    private async Task PreviewAsync() => await RunAsync(async () =>
+    {
+        if (previewTemplate is null) return;
+        var values = previewValues.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.Split('=', 2))
+            .Where(parts => parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]))
+            .ToDictionary(parts => parts[0].Trim(), parts => (string?)parts[1], StringComparer.OrdinalIgnoreCase);
+        preview = await Api.PreviewMessageTemplateAsync(branchId, previewTemplate.Id, new(values));
+    });
+
+    private async Task RecordPreferenceAsync() => await RunAsync(async () =>
+    {
+        await Api.RecordCommunicationPreferenceAsync(branchId, preferenceStakeholderId, new(
+            preferencePurpose,
+            preferenceMessageClass,
+            preferenceChannel,
+            preferenceDecision,
+            ParseTime(quietStartText),
+            ParseTime(quietEndText),
+            preferenceTimeZone,
+            preferenceEvidenceSource,
+            preferenceEvidenceReference));
+        await LoadPreferenceDataAsync();
+        message = "The communication preference evidence was recorded.";
+    });
+
+    private async Task LoadPreferencesAsync() => await RunAsync(LoadPreferenceDataAsync);
+
+    private async Task LoadPreferenceDataAsync()
+    {
+        if (string.IsNullOrWhiteSpace(preferenceStakeholderId))
+            throw new InvalidOperationException("A protected stakeholder ID is required.");
+        preferences = (await Api.ListCommunicationPreferencesAsync(branchId, preferenceStakeholderId)).ToList();
+    }
+
+    private async Task PublishAsync(MessageTemplateResponse template) => await RunAsync(async () =>
+    {
+        await Api.PublishMessageTemplateAsync(branchId, template.Id, template.Revision);
+        await LoadDataAsync();
+        message = $"Published {template.Key} v{template.Version}.";
+    });
+
+    private async Task RetireAsync(MessageTemplateResponse template) => await RunAsync(async () =>
+    {
+        await Api.RetireMessageTemplateAsync(branchId, template.Id, template.Revision);
+        await LoadDataAsync();
+        message = $"Retired {template.Key} v{template.Version}.";
+    });
+
+    private async Task LoadDataAsync()
+    {
+        if (CanViewTemplates) templates = (await Api.ListMessageTemplatesAsync(branchId)).ToList();
+        if (CanViewDeliveries) attempts = (await Api.ListMessageDeliveryAttemptsAsync(branchId)).ToList();
+        if (CanViewCallbacks) callbacks = (await Api.ListProviderCallbacksAsync(branchId)).ToList();
+    }
+
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true;
+        message = null;
+        try
+        {
+            await Session.EnsureFreshAsync(Auth);
+            await operation();
+        }
+        catch (AdminSessionRequiredException exception)
+        {
+            message = exception.Message;
+            Navigation.NavigateTo("/login");
+        }
+        catch (AdminSessionExpiredException exception)
+        {
+            message = exception.Message;
+            Navigation.NavigateTo("/login");
+        }
+        catch (RemoteErrorException exception) when (exception.Error.Category == ErrorCategory.Authentication)
+        {
+            await Session.ClearAsync();
+            message = "Your session is no longer valid. Sign in again.";
+            Navigation.NavigateTo("/login");
+        }
+        catch (RemoteErrorException exception) when (exception.Error.Category == ErrorCategory.Authorization)
+        {
+            message = "Your account is signed in but is not permitted to perform this operation.";
+        }
+        catch (Exception exception) { message = exception.Message; }
+        finally { busy = false; }
+    }
+
+    private static TimeOnly? ParseTime(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : TimeOnly.Parse(value);
+
+    private static string QuietHours(CommunicationPreferenceResponse preference) =>
+        preference.QuietHoursStart.HasValue
+            ? $"{preference.QuietHoursStart:HH\\:mm}–{preference.QuietHoursEnd:HH\\:mm} {preference.TimeZoneId}"
+            : "None";
+}

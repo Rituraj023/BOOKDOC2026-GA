@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BookDoc2026.Domain\BookDoc2026.Domain.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Application\BookDoc2026.Application.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Admin\BookDoc2026.Admin.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Client\BookDoc2026.Client.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Contracts\BookDoc2026.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.DocumentService\BookDoc2026.DocumentService.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.ErrorHandling\BookDoc2026.ErrorHandling.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Messaging\BookDoc2026.Messaging.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Templates\BookDoc2026.Templates.csproj" />
+  </ItemGroup>
+
+</Project>

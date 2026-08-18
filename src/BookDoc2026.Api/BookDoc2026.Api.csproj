@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BookDoc2026.DocumentService\BookDoc2026.DocumentService.csproj" />
+    <ProjectReference Include="..\BookDoc2026.ErrorHandling\BookDoc2026.ErrorHandling.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Messaging\BookDoc2026.Messaging.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Worker\BookDoc2026.Worker.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Application\BookDoc2026.Application.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Infrastructure\BookDoc2026.Infrastructure.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Contracts\BookDoc2026.Contracts.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Shared.Kernel\BookDoc2026.Shared.Kernel.csproj" />
+    <ProjectReference Include="..\BookDoc2026.ServiceDefaults\BookDoc2026.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BookDoc2026.Client\BookDoc2026.Client.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Contracts\BookDoc2026.Contracts.csproj" />
+    <ProjectReference Include="..\BookDoc2026.Blazor.UI\BookDoc2026.Blazor.UI.csproj" />
+    <ProjectReference Include="..\BookDoc2026.ServiceDefaults\BookDoc2026.ServiceDefaults.csproj" />
+  </ItemGroup>
+</Project>

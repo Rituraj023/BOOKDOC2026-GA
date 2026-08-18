@@ -1,0 +1,29 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BookDoc2026.Admin/BookDoc2026.Admin.csproj" />
+    <Project Path="src/BookDoc2026.Api/BookDoc2026.Api.csproj" />
+    <Project Path="src/BookDoc2026.AppHost/BookDoc2026.AppHost.csproj" />
+    <Project Path="src/BookDoc2026.Application/BookDoc2026.Application.csproj" />
+    <Project Path="src/BookDoc2026.Blazor.UI/BookDoc2026.Blazor.UI.csproj" />
+    <Project Path="src/BookDoc2026.Bootstrap/BookDoc2026.Bootstrap.csproj" />
+    <Project Path="src/BookDoc2026.Client/BookDoc2026.Client.csproj" />
+    <Project Path="src/BookDoc2026.Contracts/BookDoc2026.Contracts.csproj" />
+    <Project Path="src/BookDoc2026.DocumentService/BookDoc2026.DocumentService.csproj" />
+    <Project Path="src/BookDoc2026.Domain/BookDoc2026.Domain.csproj" />
+    <Project Path="src/BookDoc2026.ErrorHandling/BookDoc2026.ErrorHandling.csproj" />
+    <Project Path="src/BookDoc2026.Infrastructure/BookDoc2026.Infrastructure.csproj" />
+    <Project Path="src/BookDoc2026.Maui.UI/BookDoc2026.Maui.UI.csproj" />
+    <Project Path="src/BookDoc2026.Messaging/BookDoc2026.Messaging.csproj" />
+    <Project Path="src/BookDoc2026.Mobile/BookDoc2026.Mobile.csproj" />
+    <Project Path="src/BookDoc2026.Portal/BookDoc2026.Portal.csproj" />
+    <Project Path="src/BookDoc2026.ServiceDefaults/BookDoc2026.ServiceDefaults.csproj" />
+    <Project Path="src/BookDoc2026.Shared.Kernel/BookDoc2026.Shared.Kernel.csproj" />
+    <Project Path="src/BookDoc2026.Templates/BookDoc2026.Templates.csproj" />
+    <Project Path="src/BookDoc2026.Worker/BookDoc2026.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BookDoc2026.ArchitectureTests/BookDoc2026.ArchitectureTests.csproj" />
+    <Project Path="tests/BookDoc2026.IntegrationTests/BookDoc2026.IntegrationTests.csproj" />
+    <Project Path="tests/BookDoc2026.UnitTests/BookDoc2026.UnitTests.csproj" />
+  </Folder>
+</Solution>

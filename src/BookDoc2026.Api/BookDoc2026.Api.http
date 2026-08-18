@@ -1,0 +1,187 @@
+@host = https://localhost:7179
+@platformUserId = 11111111-1111-1111-1111-111111111111
+@tenantUserId = 22222222-2222-2222-2222-222222222222
+@tenantId = replace-after-tenant-approval
+@branchId = replace-after-tenant-approval
+@categoryId = replace-after-category-create
+@serviceId = replace-after-service-create
+@resourceId = replace-after-resource-create
+@patientId = replace-after-patient-create
+
+### Submit clinic application
+POST {{host}}/api/v1/tenant-applications
+Content-Type: application/json
+
+{
+  "legalName": "Example Physiotherapy Clinic",
+  "slug": "example-physio",
+  "contactEmail": "owner@example.invalid",
+  "firstBranchName": "Delhi Main Branch",
+  "firstBranchCode": "DEL01"
+}
+
+### Register patient (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/patients
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Patients.Register
+
+{
+  "registrationRequestId": "33333333-3333-3333-3333-333333333333",
+  "person": {
+    "honorific": "Ms",
+    "givenName": "Ananya",
+    "middleName": null,
+    "familyName": "Sharma",
+    "dateOfBirth": "1992-05-01",
+    "isDateOfBirthEstimated": false,
+    "administrativeSex": "Female"
+  },
+  "bloodGroup": "B+",
+  "contacts": [
+    { "type": "Mobile", "value": "9876543210", "isPrimary": true }
+  ],
+  "identifiers": [
+    { "type": "MRN", "value": "DEL-1001", "issuer": "Clinic" }
+  ],
+  "addresses": [
+    { "addressType": "PRIMARY", "line1": "Example address", "line2": null, "city": "Delhi", "stateCode": "DL", "postalCode": "110001", "isPrimary": true }
+  ],
+  "documents": [],
+  "duplicateOverrideReason": null
+}
+
+### Masked patient search (development headers only)
+GET {{host}}/api/v1/branches/{{branchId}}/patients?q=9876
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Patients.Search
+
+### Platform direct registration (development headers only)
+POST {{host}}/api/v1/platform/tenant-applications
+Content-Type: application/json
+X-User-Id: {{platformUserId}}
+X-Platform-Operator: true
+X-Permissions: Tenants.Register
+
+{
+  "legalName": "Example Orthopaedic Clinic",
+  "slug": "example-ortho",
+  "contactEmail": "owner@example.invalid",
+  "firstBranchName": "Delhi Main Branch",
+  "firstBranchCode": "DEL01"
+}
+
+### Create CT service (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/catalog/services
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Catalog.Manage
+
+{
+  "code": "CT-HEAD",
+  "name": "CT Head",
+  "description": "Non-contrast CT head",
+  "defaultDurationMinutes": 30
+}
+
+### Create CT resource category (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/catalog/resource-categories
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Catalog.Manage
+
+{
+  "parentCategoryId": null,
+  "code": "CT",
+  "name": "CT Scanner",
+  "kind": "ImagingModality"
+}
+
+### Create exclusive CT scanner (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/resources
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Resources.Manage
+
+{
+  "categoryId": "{{categoryId}}",
+  "code": "CT-01",
+  "name": "CT Scanner 1",
+  "capacityMode": "Exclusive",
+  "capacity": 1,
+  "timeZoneId": "Asia/Kolkata",
+  "externalReferenceId": null
+}
+
+### List branch resources (development headers only)
+GET {{host}}/api/v1/branches/{{branchId}}/resources
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Resources.View
+
+### Create a corporate stakeholder with shared party data (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/stakeholders/corporates
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Stakeholders.Manage
+
+{
+  "legalName": "Example Diagnostics Private Limited",
+  "tradeName": "Example Diagnostics",
+  "registrationNumber": "CIN-EXAMPLE",
+  "contacts": [{ "type": "Mobile", "value": "9876543210", "isPrimary": true }],
+  "identifiers": [{ "type": "GSTIN", "value": "07EXAMPLE1Z1", "issuer": "GST" }],
+  "addresses": [{ "addressType": "REGISTERED", "line1": "Example address", "line2": null, "city": "Delhi", "stateCode": "DL", "postalCode": "110001", "isPrimary": true }],
+  "documents": []
+}
+
+### Add a recurring resource availability rule (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/scheduling/availability-rules
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Scheduling.Availability.Manage
+
+{
+  "resourceId": "{{resourceId}}",
+  "serviceId": "{{serviceId}}",
+  "dayOfWeek": "Monday",
+  "localStart": "09:00:00",
+  "localEnd": "18:00:00",
+  "effectiveFrom": "2026-08-10",
+  "effectiveTo": null,
+  "slotIntervalMinutes": 15,
+  "capacity": 1
+}
+
+### Create an atomic ten-minute scheduling hold (development headers only)
+POST {{host}}/api/v1/branches/{{branchId}}/scheduling/holds
+Content-Type: application/json
+X-User-Id: {{tenantUserId}}
+X-Tenant-Id: {{tenantId}}
+X-Branch-Ids: {{branchId}}
+X-Permissions: Scheduling.Holds.Create
+
+{
+  "requestId": "44444444-4444-4444-4444-444444444444",
+  "patientId": "{{patientId}}",
+  "serviceId": "{{serviceId}}",
+  "startUtc": "2026-08-10T04:30:00Z",
+  "endUtc": "2026-08-10T05:00:00Z",
+  "holdMinutes": 10,
+  "resources": [{ "resourceId": "{{resourceId}}", "quantity": 1 }]
+}
