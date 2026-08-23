@@ -81,11 +81,12 @@ Indexes: normalized mobile/email; name+DOB search support; scoped patient number
 
 | Schema.table | Purpose |
 |---|---|
-| `workforce.employee` | person/employment details independent of login |
-| `workforce.practitioner` | provider code, display name, registration/license metadata, active status |
-| `workforce.practitioner_branch` | practitioner-to-branch assignment and effective dates |
-| `workforce.specialty` | controlled specialty catalog |
-| `workforce.practitioner_specialty` | many-to-many with primary flag |
+| `workforce.practitioner` | implemented tenant-wide role linking one Person Stakeholder and one Identity subject; code, type, lifecycle and version only—no duplicated display name/contact data |
+| `workforce.practitioner_credential` | implemented credential type, registration identity, authority, validity and final verification evidence |
+| `workforce.practitioner_assignment` | implemented effective-dated branch/service eligibility with optional Practitioner-kind bookable resource |
+| `workforce.employee` | future employment relationship referencing Stakeholder; source rules/database still required and never merged into Practitioner |
+| `workforce.specialty` | future controlled specialty catalog after clinical approval |
+| `workforce.practitioner_specialty` | future many-to-many specialty declaration; service eligibility is currently assignment-owned |
 | `catalog.service` | clinic service/procedure, code, duration, tax category, active dates |
 | `catalog.practitioner_service` | eligibility and optional duration override |
 | `catalog.price_list` / `price_list_item` | effective-dated price, currency, tax, branch/payer applicability |
@@ -164,11 +165,13 @@ Structured JSON is acceptable only for versioned specialty-template payloads wit
 
 | Schema.table | Purpose |
 |---|---|
-| `billing.invoice` | number, patient, encounter/booking optional, issue time, currency, subtotal/discount/tax/total/balance, status, row version |
-| `billing.invoice_line` | service snapshot, quantity, unit price, discount/tax snapshot, line total, source record |
+| `billing.invoice` | implemented idempotent number, Patient, optional Booking/Contract, issue evidence, currency, server totals, allocation balance/status and version |
+| `billing.invoice_line` | implemented immutable service code/name, quantity, decimal unit price and line total snapshot |
 | `billing.discount_approval` | invoice/line, requested/approved actors, reason, threshold/rule |
-| `billing.payment` | receipt number, patient, time, amount/currency, method, external reference, status |
-| `billing.payment_allocation` | payment FK, invoice FK, amount; unique pair if only one allocation row allowed |
+| `billing.payment` | implemented idempotent receipt number, Patient, time, amount/currency, allocated balance, receiver and version |
+| `billing.payment_tender` | implemented immutable split tender with typed method, amount and optional external reference/narration |
+| `billing.payment_allocation` | implemented idempotent append-only Payment-to-Invoice amount with actor/time evidence |
+| `billing.financial_document_snapshot` | implemented immutable canonical Invoice/receipt payload, schema version and SHA-256 hash; rendered storage remains future |
 | `billing.refund` | payment/allocation reference, amount, reason, approval, external reference, status |
 | `billing.financial_adjustment` | credit/debit/reversal with reference to original posting |
 | `billing.cash_session` | branch/till/cashier, open/close values/times, discrepancy and approval |

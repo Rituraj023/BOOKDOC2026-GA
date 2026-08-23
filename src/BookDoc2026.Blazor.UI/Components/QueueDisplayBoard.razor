@@ -1,0 +1,21 @@
+<div class="display-board" aria-live="polite">
+    @if (Tickets.Count == 0)
+    {
+        <p>No patients are currently being called or served.</p>
+    }
+    else
+    {
+        @foreach (var ticket in Tickets)
+        {
+            <article>
+                <strong>@ticket.DisplayToken</strong>
+                <QueueStatusBadge Status="@ticket.Status" />
+                @if (ticket.CallCount > 1) { <span>Call @ticket.CallCount</span> }
+            </article>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<QueueDisplayTicketResponse> Tickets { get; set; } = [];
+}

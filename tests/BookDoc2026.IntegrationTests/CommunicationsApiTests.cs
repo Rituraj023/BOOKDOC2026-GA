@@ -171,8 +171,11 @@ public sealed class CommunicationsApiTests
         Assert.Equal(HttpStatusCode.OK, initialListResponse.StatusCode);
         var initialList = await initialListResponse.Content.ReadFromJsonAsync<
             ApiEnvelope<IReadOnlyCollection<MessageTemplateResponse>>>();
-        var inherited = Assert.Single(Assert.IsType<
-            ApiEnvelope<IReadOnlyCollection<MessageTemplateResponse>>>(initialList).Data);
+        var inheritedTemplates = Assert.IsType<
+            ApiEnvelope<IReadOnlyCollection<MessageTemplateResponse>>>(initialList).Data;
+        Assert.Equal(5, inheritedTemplates.Count);
+        var inherited = Assert.Single(inheritedTemplates, template =>
+            template.Key == "Booking.Confirmed.Patient");
         Assert.Equal("Tenant", inherited.Scope);
 
         var request = new CreateMessageTemplateVersionRequest(

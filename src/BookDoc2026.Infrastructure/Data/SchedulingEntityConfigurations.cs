@@ -75,9 +75,111 @@ internal sealed class ResourceReservationConfiguration : IEntityTypeConfiguratio
             table.HasCheckConstraint("ck_resource_reservation_quantity", "[quantity] BETWEEN 1 AND 1000");
         });
         builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.Property(x => x.RequirementRoleCode).HasMaxLength(40);
         builder.HasIndex(x => new { x.TenantId, x.HoldId, x.ResourceId }).IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.ResourceId, x.StartUtc, x.EndUtc });
         builder.HasOne<SchedulingHold>().WithMany().HasForeignKey(x => new { x.TenantId, x.HoldId }).HasPrincipalKey(x => new { x.TenantId, x.Id });
         builder.HasOne<BookableResource>().WithMany().HasForeignKey(x => new { x.TenantId, x.BranchId, x.ResourceId }).HasPrincipalKey(x => new { x.TenantId, x.BranchId, x.Id });
+    }
+}
+
+internal sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
+{
+    public void Configure(EntityTypeBuilder<Booking> builder)
+    {
+        builder.ToTable("booking", "scheduling", table =>
+        {
+            table.HasCheckConstraint("ck_booking_interval", "[start_utc] < [end_utc]");
+            table.HasCheckConstraint("ck_booking_status", "[status] BETWEEN 1 AND 4");
+        });
+        builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.Property(x => x.BookingNumber).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.CancellationReason).HasMaxLength(250);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.HasIndex(x => new { x.TenantId, x.HoldId }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.BookingNumber }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.WaitlistEntryId }).IsUnique().HasFilter("[waitlist_entry_id] IS NOT NULL");
+        builder.HasIndex(x => new { x.TenantId, x.BranchId, x.StartUtc, x.Status });
+        builder.HasOne<Branch>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.BranchId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<SchedulingHold>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.HoldId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Patient>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PatientId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<ClinicalService>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ServiceId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Booking>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PreviousBookingId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<Booking>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ReplacedByBookingId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne<BookingWaitlistEntry>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.WaitlistEntryId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class BookingWaitlistEntryConfiguration : IEntityTypeConfiguration<BookingWaitlistEntry>
+{
+    public void Configure(EntityTypeBuilder<BookingWaitlistEntry> builder)
+    {
+        builder.ToTable("booking_waitlist", "scheduling", table =>
+        {
+            table.HasCheckConstraint("ck_booking_waitlist_window", "[earliest_start_utc] <= [latest_start_utc]");
+            table.HasCheckConstraint("ck_booking_waitlist_priority", "[priority] BETWEEN 1 AND 5");
+            table.HasCheckConstraint("ck_booking_waitlist_status", "[status] BETWEEN 1 AND 3");
+        });
+        builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.Property(x => x.Reason).HasMaxLength(250).IsRequired();
+        builder.Property(x => x.WithdrawalReason).HasMaxLength(250);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.HasIndex(x => new { x.TenantId, x.BranchId, x.ServiceId, x.Status, x.Priority, x.CreatedUtc });
+        builder.HasIndex(x => new { x.TenantId, x.PromotedBookingId }).IsUnique().HasFilter("[promoted_booking_id] IS NOT NULL");
+        builder.HasOne<Branch>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.BranchId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Patient>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PatientId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<ClinicalService>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ServiceId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Booking>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PromotedBookingId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+internal sealed class BookingResourceAllocationConfiguration : IEntityTypeConfiguration<BookingResourceAllocation>
+{
+    public void Configure(EntityTypeBuilder<BookingResourceAllocation> builder)
+    {
+        builder.ToTable("booking_resource", "scheduling", table =>
+            table.HasCheckConstraint("ck_booking_resource_quantity", "[quantity] BETWEEN 1 AND 1000"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.RequirementRoleCode).HasMaxLength(40);
+        builder.HasIndex(x => new { x.TenantId, x.BookingId, x.ResourceId }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.HoldReservationId }).IsUnique();
+        builder.HasOne<Booking>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.BookingId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<ResourceReservation>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.HoldReservationId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<BookableResource>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.BranchId, x.ResourceId })
+            .HasPrincipalKey(x => new { x.TenantId, x.BranchId, x.Id });
     }
 }

@@ -3,6 +3,8 @@
 Status: approved planning direction; detailed workflow validation pending  
 Reviewed: 2026-08-09
 
+Implementation checkpoint: [DOC-042](42-imaging-queue-and-realtime-reference-slice.md) implements the first X-ray/CT backend Queue, privacy-safe display projection, authorized reconciliation API and status-only SignalR invalidation. DOC-043–045 add role-facing radiology journeys, and [DOC-050](50-portal-cashier-and-admin-billing-oversight.md) adds permission-composed Portal Cashier and Admin Billing oversight dashboards. Broader clinic workflow acceptance remains pending.
+
 ## Confirmed product decisions
 
 1. Every role may have a dashboard in both Admin and Portal when its permissions allow access.

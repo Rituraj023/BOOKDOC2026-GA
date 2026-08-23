@@ -56,6 +56,8 @@ Each source row must end in exactly one state:
 
 Silent row loss is a release blocker.
 
+For Wave 4, practitioner and employee rows receive separate dispositions. A legacy doctor/user is mapped to one Person Stakeholder, optionally one Identity invitation and one Practitioner profile; login IDs, doctor records and employee/payroll rows are never collapsed by assumption. Registration authority/number/validity evidence maps to a credential only after source provenance is known. Branch and service eligibility maps to effective Practitioner assignments, while doctor-only appointment objects map separately to Practitioner-kind resources when scheduling evidence requires them.
+
 ## Time and identity conversion
 
 - First identify whether each legacy datetime represents UTC, server local, clinic local, date-only, or unknown.
@@ -180,6 +182,7 @@ Prefer forward-fix after irreversible new clinical/financial writes unless the r
 - Hold expiry, cancellation, no-show, overbook permission, leave/closure exception, branch time zone and DST cases.
 - Guest/quick request is rate-limited and verified, cannot claim a confirmed booking, and creates exactly one appointment only when an offered slot is accepted.
 - Concurrent multi-resource booking reserves doctor/room/machine/bed category atomically or reserves nothing; pooled capacity cannot be exceeded.
+- Confirmation creates one distinct Booking, immutable role-aware allocations, audit and outbox row atomically; replay returns the existing Booking, while incomplete mandatory roles leave the hold active and create no side effects.
 - Bed reservation and future inpatient occupancy cannot double-allocate a bed; conversion and cancellation preserve lineage.
 
 ### Queues and realtime
@@ -195,7 +198,7 @@ Prefer forward-fix after irreversible new clinical/financial writes unless the r
 
 - Push tokens are user/app/device bound, revocable and removed on provider-invalid response.
 - Email/WhatsApp rendering rejects unknown/missing variables, escapes unsafe content and preserves the published template version.
-- Consent, opt-out, locale, quiet-hours and urgent exceptions are enforced before enqueue.
+- Consent, opt-out, locale and quiet-hours are enforced before provider dispatch; durable outbox payloads contain no destination or message body, and a policy suppression is recorded without calling the provider. Any urgent/legal-basis exception requires separately approved rules and evidence.
 - Email/WhatsApp/push webhooks verify signature and idempotency; duplicate callbacks do not duplicate state or business actions.
 - Logs/audit exclude destination, tokens, message bodies, clinical content and provider credentials.
 - Scheduled report delivery uses the same published email/WhatsApp template registry, consent/channel policy and secure-link rules; attachments follow explicit sensitivity and expiry policy.
@@ -229,6 +232,15 @@ Prefer forward-fix after irreversible new clinical/financial writes unless the r
 - Amendment preserves prior hash/version, actor, time and reason.
 - Observation units/precision and abnormal/reference behavior are tested.
 - Export/print and sensitive-note access require permission and create audit evidence.
+
+### Workforce and Practitioner eligibility
+
+- A corporate Stakeholder, inactive Identity subject, duplicate Practitioner code/person/subject or forged cross-tenant ID cannot create a Practitioner.
+- Credential verification/rejection is separately authorized, versioned and final; expired, future, pending or rejected evidence cannot activate/sign.
+- Assignment service, branch and optional Practitioner-kind resource/capability are validated; overlapping active periods are rejected.
+- Profile suspension/inactivation, assignment suspension/end, Identity deactivation or Stakeholder inactivation immediately blocks new signing without rewriting existing clinical signatures.
+- `Encounters.Sign`/`Encounters.Amend` without current Practitioner eligibility returns 403; eligibility without the Encounter permission also returns 403.
+- Multi-branch responses and mutations cannot expose or alter assignments outside durable branch scope.
 
 ### Billing
 

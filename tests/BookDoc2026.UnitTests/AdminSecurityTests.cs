@@ -72,6 +72,22 @@ public sealed class AdminSecurityTests
     }
 
     [Fact]
+    public void Queue_service_point_navigation_requires_its_dedicated_permission()
+    {
+        Assert.False(AdminPermissionPolicy.CanManageQueueServicePoints([FoundationPermissions.QueuesView]));
+        Assert.True(AdminPermissionPolicy.CanManageQueueServicePoints([FoundationPermissions.QueuesServicePointsManage]));
+    }
+
+    [Fact]
+    public void Billing_oversight_accepts_either_read_permission_but_not_mutation_only()
+    {
+        Assert.False(AdminPermissionPolicy.CanAccessBillingOversight(
+            [FoundationPermissions.BillingInvoicesIssue, FoundationPermissions.BillingPaymentsReceive]));
+        Assert.True(AdminPermissionPolicy.CanAccessBillingOversight([FoundationPermissions.BillingInvoicesView]));
+        Assert.True(AdminPermissionPolicy.CanAccessBillingOversight([FoundationPermissions.BillingPaymentsView]));
+    }
+
+    [Fact]
     public async Task SessionState_SignsInAndKeepsRotatedTokensInServerStore()
     {
         var clock = new MutableTimeProvider(new DateTimeOffset(2026, 8, 18, 8, 0, 0, TimeSpan.Zero));

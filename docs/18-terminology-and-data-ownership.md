@@ -33,7 +33,7 @@
 - Identity owns authentication and grants, not practitioner credentials or patient demographics.
 - Stakeholder owns shared party truth inside a tenant. A Stakeholder is exactly one Person or Corporate and owns reusable contacts, addresses, identifiers and document references.
 - Patient Registry owns the patient role, patient number, clinical registration status and patient-specific attributes. A Patient must reference a Person stakeholder; it does not duplicate the person's name, birth date, sex, contacts, addresses, identifiers or documents.
-- Future employee, practitioner, guardian, payer, supplier and corporate relationships should reference the Stakeholder identity when the same real party is involved, while each module continues to own its role-specific state.
+- The implemented Practitioner role references a Person Stakeholder while Workforce owns credentials and assignments. Future employee, guardian, payer, supplier and corporate relationships should use the same rule: reference Stakeholder truth while each module owns only its role-specific state.
 - Scheduling owns appointments/reservations; Queue owns service progression; Clinical owns encounter truth.
 - Reporting owns definitions/executions/snapshots but reads module-owned projections, not unrestricted tables.
 - Documents owns binary storage metadata; the originating module owns meaning, access and retention classification.

@@ -1,0 +1,25 @@
+@using BookDoc2026.Blazor.UI.Dashboard
+
+@if (VisibleCards.Count == 0)
+{
+    <p class="dashboard-empty">No application workspace is assigned to this role. Contact an administrator if access is expected.</p>
+}
+else
+{
+    <div class="dashboard-grid">
+        @foreach (var card in VisibleCards)
+        {
+            <a class="dashboard-card" href="@card.Href">
+                @if (!string.IsNullOrWhiteSpace(card.Badge)) { <span>@card.Badge</span> }
+                <strong>@card.Title</strong>
+                <small>@card.Description</small>
+            </a>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyCollection<DashboardCardDescriptor> Cards { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyCollection<string> Permissions { get; set; } = [];
+    private IReadOnlyList<DashboardCardDescriptor> VisibleCards => PermissionDashboardCatalog.Filter(Cards, Permissions);
+}

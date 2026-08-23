@@ -32,6 +32,7 @@ authenticated user
 ```
 
 - Permissions are capabilities such as `Patients.View`, `Appointments.Create`, `Encounters.Sign`, `Payments.Refund`, `Reports.Schedule` and `Printing.Reprint`; role names never substitute for server checks.
+- The implemented Practitioner foundation separates `Practitioners.View`, `Practitioners.Manage`, `Practitioners.Credentials.Verify` and `Practitioners.Assignments.Manage`. Clinical signing still requires `Encounters.Sign`/`Encounters.Amend` and a current verified Practitioner assignment; neither permission family substitutes for the other.
 - Deny by default. Scope is durable server data, not a client-supplied tenant or branch header.
 - A role may receive a dashboard in Admin and Portal only when host access and card/query permissions are granted.
 - Admin access additionally requires the approved network/IP route. IP allow-listing is defense in depth and never replaces identity, permission or tenant/branch scope.

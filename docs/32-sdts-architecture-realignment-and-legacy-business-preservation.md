@@ -212,7 +212,7 @@ The Contract module may initially live under Scheduling or Billing as a bounded 
 1. Accept the Identity/JWT and durable-scope foundation, including the bootstrap/deployment procedure.
 2. Approve a Contract/Package rule matrix from live users and anonymized production evidence.
 3. Implement Contract and entitlement primitives with decimal pricing and concurrency tests.
-4. Extend Scheduling hold into confirmed multi-resource Booking with status history and reschedule lineage.
+4. Extend the confirmed multi-resource Booking reference in DOC-040 with status history, cancellation, waitlist and reschedule lineage.
 5. Integrate Queue and Encounter transitions through commands/events, not a shared status field.
 6. Implement invoice issue, Payment/Tender/Allocation, then refund/reversal/adjustment.
 7. Migrate legacy records through crosswalks and disposition rules; never run legacy repository or stored-procedure code in the target.

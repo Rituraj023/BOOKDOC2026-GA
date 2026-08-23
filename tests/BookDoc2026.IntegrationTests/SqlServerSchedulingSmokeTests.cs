@@ -21,7 +21,7 @@ namespace BookDoc2026.IntegrationTests;
 public sealed class SqlServerSchedulingSmokeTests
 {
     [Fact]
-    public async Task Hold_UsesSqlServerTransactionalResourceLockAndRejectsOverlap()
+    public async Task HoldAndBooking_UseSqlServerTransactionalLocksAndRejectOverlap()
     {
         var connectionString = Environment.GetEnvironmentVariable("BOOKDOC_SQLSERVER_TEST_CONNECTION");
         if (string.IsNullOrWhiteSpace(connectionString)) return;
@@ -46,7 +46,8 @@ public sealed class SqlServerSchedulingSmokeTests
         var tenant = TestPublicIds.DecodeTenant(scope.ServiceProvider, tenantResponse);
         execution.BecomeTenant(tenant.TenantId, [tenant.BranchId], FoundationPermissions.CatalogManage,
             FoundationPermissions.ResourcesManage, FoundationPermissions.PatientsRegister,
-            FoundationPermissions.SchedulingAvailabilityManage, FoundationPermissions.SchedulingHoldsCreate);
+            FoundationPermissions.SchedulingAvailabilityManage, FoundationPermissions.SchedulingHoldsCreate,
+            FoundationPermissions.SchedulingBookingsConfirm);
         var category = await catalog.CreateCategoryAsync(tenant.BranchId, new(null, "BED", "Bed", "Bed"), default);
         var clinicalService = await catalog.CreateServiceAsync(tenant.BranchId, new("IP-STAY", "Inpatient Stay", null, 60), default);
         var resource = await catalog.CreateResourceAsync(tenant.BranchId,
@@ -56,6 +57,11 @@ public sealed class SqlServerSchedulingSmokeTests
             publicIds.Decode(PublicIdKind.BookableResource, resource.Id, tenant.TenantId),
             new(clinicalService.Id, null, 1),
             default);
+        await catalog.AddRequirementAsync(
+            tenant.BranchId,
+            publicIds.Decode(PublicIdKind.ClinicalService, clinicalService.Id, tenant.TenantId),
+            new(category.Id, "Bed", 1, false),
+            default);
         var patient = await patients.RegisterAsync(tenant.BranchId, new(Guid.NewGuid(),
             new(null, "SQL", null, "Patient", new DateOnly(1990, 1, 1), false, "Other"), null,
             [new("Mobile", "9876500000", true)], [], [], [], null), default);
@@ -64,11 +70,19 @@ public sealed class SqlServerSchedulingSmokeTests
         await scheduling.CreateRuleAsync(tenant.BranchId, new(resource.Id, clinicalService.Id, local.DayOfWeek.ToString(),
             new(0, 0), new(23, 59), DateOnly.FromDateTime(local.DateTime), null, 15, 1), default);
         var hold = await scheduling.CreateHoldAsync(tenant.BranchId, new(Guid.NewGuid(), patient.Id, clinicalService.Id,
-            start, start.AddMinutes(30), 10, [new(resource.Id, 1)]), default);
+            start, start.AddMinutes(30), 10, [new(resource.Id, 1, "Bed")]), default);
         Assert.Equal("Active", hold.Status);
         await Assert.ThrowsAsync<BookDoc2026.Domain.Common.ConcurrencyConflictException>(() => scheduling.CreateHoldAsync(
             tenant.BranchId, new(Guid.NewGuid(), patient.Id, clinicalService.Id, start, start.AddMinutes(30), 10,
                 [new(resource.Id, 1)]), default));
+        var booking = await scheduling.ConfirmHoldAsync(
+            tenant.BranchId,
+            publicIds.Decode(PublicIdKind.SchedulingHold, hold.Id, tenant.TenantId),
+            new ConfirmSchedulingHoldRequest(hold.Version),
+            default);
+        Assert.Equal("Confirmed", booking.Status);
+        Assert.False(booking.IsReplay);
+        Assert.Single(await db.Bookings.IgnoreQueryFilters().ToListAsync());
         await transaction.RollbackAsync();
     }
 

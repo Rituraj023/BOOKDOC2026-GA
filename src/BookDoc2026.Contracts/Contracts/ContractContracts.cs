@@ -1,0 +1,79 @@
+namespace BookDoc2026.Contracts.Contracts;
+
+public sealed record CreateContractEntitlementRequest(
+    string ServiceId,
+    string? ResourceCategoryId,
+    int TotalUnits,
+    decimal UnitPrice,
+    string RuleVersion);
+
+public sealed record CreateContractRequest(
+    string PatientId,
+    string ContractNumber,
+    string ContractTypeCode,
+    DateOnly ValidFrom,
+    DateOnly ValidTo,
+    decimal PackagePrice,
+    string Currency,
+    string RuleVersion,
+    string? Notes,
+    IReadOnlyCollection<CreateContractEntitlementRequest> Entitlements);
+
+public sealed record ContractEntitlementResponse(
+    string Id,
+    string ServiceId,
+    string? ResourceCategoryId,
+    int TotalUnits,
+    int ReservedUnits,
+    int ConsumedUnits,
+    int AvailableUnits,
+    decimal UnitPrice,
+    string Currency,
+    string RuleVersion,
+    long Version);
+
+public sealed record ContractResponse(
+    string Id,
+    string PatientId,
+    string ContractNumber,
+    string ContractTypeCode,
+    DateOnly ValidFrom,
+    DateOnly ValidTo,
+    string Status,
+    decimal PackagePrice,
+    string Currency,
+    string RuleVersion,
+    string? Notes,
+    long Version,
+    IReadOnlyCollection<ContractEntitlementResponse> Entitlements);
+
+public sealed record ReserveEntitlementRequest(
+    Guid RequestId,
+    string BookingId,
+    int Units,
+    long ExpectedEntitlementVersion);
+
+public sealed record ConsumeEntitlementReservationRequest(
+    long ExpectedReservationVersion,
+    long ExpectedEntitlementVersion);
+
+public sealed record ReleaseEntitlementReservationRequest(
+    long ExpectedReservationVersion,
+    long ExpectedEntitlementVersion,
+    string Reason);
+
+public sealed record EntitlementReservationResponse(
+    string Id,
+    string ContractId,
+    string EntitlementId,
+    string BookingId,
+    Guid RequestId,
+    int Units,
+    string Status,
+    DateTimeOffset ReservedUtc,
+    DateTimeOffset? ConsumedUtc,
+    DateTimeOffset? ReleasedUtc,
+    string? ReleaseReason,
+    long Version,
+    ContractEntitlementResponse Entitlement,
+    bool IsReplay);

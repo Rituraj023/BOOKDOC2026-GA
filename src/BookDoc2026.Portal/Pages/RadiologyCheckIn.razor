@@ -1,0 +1,134 @@
+@page "/radiology/check-in"
+@using BookDoc2026.Blazor.UI.Queues
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject PortalSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Radiology check-in | BOOKDOC2026 Portal</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to access reception check-in.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanCheckIn)
+{
+    <section class="panel"><h1>Access not granted</h1><p>Patient search and queue check-in permissions are both required.</p></section>
+}
+else
+{
+    <div class="page-heading"><div><p class="eyebrow">Operations / Reception</p><h1>Radiology check-in</h1><p>Find the patient, select an imaging destination and issue one privacy-safe queue token.</p></div><ScopeBadge Label="Branch scoped" /></div>
+
+    @if (draft.IsComplete)
+    {
+        <section class="panel checkin-success" aria-live="polite">
+            <p class="eyebrow">@(draft.Result!.IsReplay ? "Existing check-in recovered" : "Check-in complete")</p>
+            <h2>Queue token @draft.Result.DisplayToken</h2>
+            <p>Status: <QueueStatusBadge Status="@draft.Result.Status" />. The safe display uses this token and never the patient's name.</p>
+            <button class="primary" @onclick="StartAnother">Start another check-in</button>
+        </section>
+    }
+    else
+    {
+        <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">Step 1</p><h2>Find patient</h2></div><span class="muted">Name, patient number, mobile or email</span></div>
+            <div class="inline-form"><input aria-label="Patient search" @bind="searchQuery" @bind:event="oninput" placeholder="Enter at least two characters" /><button @onclick="SearchAsync" disabled="@(busy || searchQuery.Trim().Length < 2)">Search</button></div>
+            @if (searchPerformed && patients.Count == 0) { <p class="empty">No patient matched this branch-scoped search.</p> }
+            @if (patients.Count > 0)
+            {
+                <div class="patient-results">@foreach (var patient in patients)
+                {
+                    <button class="patient-result @(selectedPatient?.Id == patient.Id ? "selected" : null)" @onclick="() => SelectPatient(patient)" type="button">
+                        <strong>@patient.DisplayName</strong><span>@patient.PatientNumber · @(patient.BirthYear?.ToString() ?? "Year unavailable") · @patient.AdministrativeSex</span><small>@(patient.MaskedMobile ?? patient.MaskedEmail ?? "No masked contact")</small>
+                    </button>
+                }</div>
+            }
+        </section>
+
+        <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">Step 2</p><h2>Queue destination</h2></div><span class="muted">@(selectedPatient is null ? "Select a patient first" : selectedPatient.DisplayName)</span></div>
+            <div class="form-grid checkin-grid">
+                <label>Imaging service point<select @bind="servicePointId"><option value="">Select destination</option>@foreach (var point in servicePoints) { <option value="@point.Id">@point.Code · @point.Name (@point.Modality)</option> }</select></label>
+                <label>Protected Booking ID (optional)<input @bind="bookingId" placeholder="Validated against this patient and branch" /></label>
+                <label>Priority<select @bind="priority"><option>Normal</option>@if (CanManagePriority) { <option>Urgent</option> }</select></label>
+                @if (priority == "Urgent") { <label>Urgent reason<input @bind="priorityReason" placeholder="Required clinical escalation reason" /></label> }
+            </div>
+            <button class="primary" @onclick="CheckInAsync" disabled="@(!CanSubmit)">@(busy ? "Submitting…" : "Issue queue token")</button>
+            <p class="muted">If delivery is interrupted, Retry uses the same request identity so the API returns the existing token instead of creating a duplicate.</p>
+        </section>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice error-notice" aria-live="polite">@message</p> }
+}
+
+@code {
+    private readonly RadiologyCheckInDraft draft = new();
+    private List<ImagingServicePointResponse> servicePoints = [];
+    private List<PatientSearchResponse> patients = [];
+    private PatientSearchResponse? selectedPatient;
+    private string branchId = string.Empty, searchQuery = string.Empty, servicePointId = string.Empty;
+    private string? bookingId, priorityReason, message;
+    private string priority = "Normal";
+    private bool busy, searchPerformed;
+    private bool CanCheckIn => Session.HasPermission(FoundationPermissions.PatientsSearch)
+        && Session.HasPermission(FoundationPermissions.QueuesCheckIn);
+    private bool CanManagePriority => Session.HasPermission(FoundationPermissions.QueuesPriorityManage);
+    private bool CanSubmit => !busy && selectedPatient is not null && !string.IsNullOrWhiteSpace(servicePointId)
+        && (priority != "Urgent" || !string.IsNullOrWhiteSpace(priorityReason));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated || !CanCheckIn) return;
+        branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(branchId)) { message = "Select a branch scope when signing in."; return; }
+        await RunAsync(async () => servicePoints = (await Api.ListImagingServicePointsAsync(branchId)).Where(point => point.IsActive).ToList());
+    }
+
+    private Task SearchAsync() => RunAsync(async () =>
+    {
+        selectedPatient = null;
+        patients = (await Api.SearchPatientsAsync(branchId, searchQuery.Trim())).ToList();
+        searchPerformed = true;
+    });
+
+    private void SelectPatient(PatientSearchResponse patient) => selectedPatient = patient;
+
+    private Task CheckInAsync() => RunAsync(async () =>
+    {
+        if (selectedPatient is null) throw new InvalidOperationException("Select a patient before check-in.");
+        var result = await Api.CheckInQueueTicketAsync(branchId, new(
+            draft.RequestId,
+            servicePointId,
+            selectedPatient.Id,
+            Clean(bookingId),
+            priority,
+            priority == "Urgent" ? Clean(priorityReason) : null));
+        draft.Complete(result);
+        message = result.IsReplay
+            ? "The earlier check-in was recovered; no duplicate ticket was created."
+            : null;
+    }, retainSubmissionIdentity: true);
+
+    private void StartAnother()
+    {
+        draft.Reset(); selectedPatient = null; patients = []; searchQuery = string.Empty;
+        bookingId = null; priorityReason = null; priority = "Normal"; message = null; searchPerformed = false;
+    }
+
+    private async Task RunAsync(Func<Task> operation, bool retainSubmissionIdentity = false)
+    {
+        busy = true; message = null;
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (PortalSessionRequiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception)
+        {
+            message = exception.Error.SafeMessage
+                + (retainSubmissionIdentity ? " The same submission identity will be retained for Retry." : string.Empty);
+        }
+        catch (Exception exception) { message = exception.Message; }
+        finally { busy = false; }
+    }
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

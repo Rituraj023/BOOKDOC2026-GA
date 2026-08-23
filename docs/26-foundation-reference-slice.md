@@ -146,7 +146,7 @@ dotnet list BookDoc2026.slnx package --vulnerable --include-transitive
 
 This slice does not implement a production bootstrap/MFA or external identity-provider procedure, complete Admin/Portal/mobile experiences, mobile sign-in or offline behavior, staff employment/payroll, clinical records, confirmed appointments, queues, SignalR, provider messaging, reports, print agent, file storage, deployment automation, production observability or legacy data migration. Patient Registry, Resource Catalog and Scheduling hold/reference slices now exist separately; they are not pilot-complete workflows.
 
-The next recommended business work is the Contract/Package rule matrix and aggregate foundation, followed by conversion of Scheduling holds into confirmed multi-resource Bookings. The legacy behavior and implementation order are controlled by [DOC-032](32-sdts-architecture-realignment-and-legacy-business-preservation.md). Clinical, billing, queue, communication, reporting and printing work remain governed by their owning plans.
+The Contract/Package rule matrix and aggregate foundation remain required. Conversion of Scheduling holds into confirmed multi-resource Bookings is now implemented in [DOC-040](40-generalized-booking-and-preference-notification-reference-slice.md); cancellation/reschedule/waitlist is its next lifecycle increment. Legacy behavior and implementation order remain controlled by [DOC-032](32-sdts-architecture-realignment-and-legacy-business-preservation.md). Clinical, billing, queue, communication, reporting and printing work remain governed by their owning plans.
 
 ## Acceptance gate for this slice
 

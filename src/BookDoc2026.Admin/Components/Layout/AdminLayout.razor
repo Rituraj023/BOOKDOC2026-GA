@@ -14,6 +14,14 @@
             {
                 <a href="/communications">Communications</a>
             }
+            @if (CanManageQueueServicePoints)
+            {
+                <a href="/radiology/service-points">Radiology setup</a>
+            }
+            @if (CanAccessBilling)
+            {
+                <a href="/billing/oversight">Billing</a>
+            }
         }
     </nav>
     <div class="session-nav">
@@ -32,6 +40,8 @@
 
 @code {
     private bool CanViewCommunications => AdminPermissionPolicy.CanAccessCommunications(Session.Permissions);
+    private bool CanManageQueueServicePoints => AdminPermissionPolicy.CanManageQueueServicePoints(Session.Permissions);
+    private bool CanAccessBilling => AdminPermissionPolicy.CanAccessBillingOversight(Session.Permissions);
 
     protected override void OnInitialized() => Session.Changed += OnSessionChanged;
 

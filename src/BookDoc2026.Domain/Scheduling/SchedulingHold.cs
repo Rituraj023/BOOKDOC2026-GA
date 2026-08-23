@@ -51,6 +51,17 @@ public sealed class SchedulingHold : TenantScopedEntity
         StampModified(now);
     }
 
+    public void Confirm(long expectedVersion, DateTimeOffset now)
+    {
+        if (Version != expectedVersion) throw new ConcurrencyConflictException("The hold changed after it was loaded.");
+        MarkExpired(now);
+        if (Status != SchedulingHoldStatus.Active)
+            throw new DomainRuleException("Only an active, unexpired hold can be confirmed.");
+        Status = SchedulingHoldStatus.Confirmed;
+        Version++;
+        StampModified(now);
+    }
+
     public void MarkExpired(DateTimeOffset now)
     {
         if (Status == SchedulingHoldStatus.Active && ExpiresUtc <= now)

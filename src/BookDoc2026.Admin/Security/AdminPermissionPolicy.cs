@@ -20,4 +20,14 @@ public static class AdminPermissionPolicy
         var granted = permissions.ToHashSet(StringComparer.Ordinal);
         return CommunicationPermissions.Any(granted.Contains);
     }
+
+    public static bool CanManageQueueServicePoints(IEnumerable<string> permissions)
+        => permissions.Contains(FoundationPermissions.QueuesServicePointsManage, StringComparer.Ordinal);
+
+    public static bool CanAccessBillingOversight(IEnumerable<string> permissions)
+    {
+        var granted = permissions.ToHashSet(StringComparer.Ordinal);
+        return granted.Contains(FoundationPermissions.BillingInvoicesView)
+            || granted.Contains(FoundationPermissions.BillingPaymentsView);
+    }
 }

@@ -129,7 +129,7 @@ This slice advances the evidence-based DOC-033 rows as follows:
 - row 10, shared Client/Contracts, from 70% to 75% because Admin now exercises login, refresh rotation and revoke through the shared Auth Client;
 - row 11, Identity, from 80% to 85% because the Admin host now consumes API-owned session rotation, expiry and revocation correctly.
 
-The exact twenty-row simple average is now **62%**. No score is awarded for MFA, durable privileged browser sessions, production proxy deployment, report/control-plane screens, accessibility/browser automation, provider operations or user acceptance.
+At this slice's checkpoint, the exact twenty-row simple average was **62%**. [DOC-040](40-generalized-booking-and-preference-notification-reference-slice.md) subsequently advances the current score to 63%. No score from this Admin slice is awarded for MFA, durable privileged browser sessions, production proxy deployment, report/control-plane screens, accessibility/browser automation, provider operations or user acceptance.
 
 ## Remaining gates
 
@@ -145,4 +145,4 @@ Before production use:
 
 ## Next recommended slice
 
-Implement the first confirmed generalized Booking vertical slice and its stakeholder-addressed transactional notification. Apply the existing preference evidence during dispatch, keep the notification durable through outbox/Worker, and continue with the development provider until the legal/consent and vendor gates in DOC-017 and DOC-020 are approved.
+[DOC-040](40-generalized-booking-and-preference-notification-reference-slice.md) completes this recommended backend slice with atomic generalized Booking and preference-controlled durable patient notification. The next recommendation is Booking cancellation, rescheduling and waitlist promotion; production providers remain gated by DOC-017 and DOC-020.

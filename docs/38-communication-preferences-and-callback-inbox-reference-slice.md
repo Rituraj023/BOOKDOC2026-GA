@@ -159,4 +159,4 @@ Build the Admin security foundation before adding more management screens:
 4. fail-closed trusted-proxy and approved-IP/network policy;
 5. integration tests for forwarded-header spoofing, missing allow-list configuration and permission-filtered navigation.
 
-[DOC-039](39-admin-security-foundation-reference-slice.md) completes the Admin security work above. Next connect preference evaluation to the first real stakeholder-addressed Booking notification; do not select a real WhatsApp/email provider until DOC-017 and DOC-020 approvals pass.
+[DOC-039](39-admin-security-foundation-reference-slice.md) completes the Admin security work above. [DOC-040](40-generalized-booking-and-preference-notification-reference-slice.md) then connects preference evaluation to the first patient-addressed durable Booking notification. Production WhatsApp/email providers remain gated by DOC-017 and DOC-020.

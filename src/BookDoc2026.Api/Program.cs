@@ -1,6 +1,7 @@
 using BookDoc2026.Api.Context;
 using BookDoc2026.Api.Middleware;
 using BookDoc2026.Api.Security;
+using BookDoc2026.Api.Realtime;
 using BookDoc2026.Application;
 using BookDoc2026.Application.Abstractions;
 using BookDoc2026.Contracts.Security;
@@ -34,6 +35,8 @@ if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Te
 }
 builder.Services.AddBookDocDocumentService();
 builder.Services.AddBookDocWorker();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IQueueRealtimeNotifier, QueueRealtimeNotifier>();
 
 builder.Services
     .AddAuthentication(options =>
@@ -79,6 +82,38 @@ builder.Services.AddAuthorization(options =>
     AddPermissionPolicy(FoundationPermissions.SchedulingAvailabilityManage, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.SchedulingHoldsCreate, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.SchedulingHoldsRelease, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.SchedulingBookingsConfirm, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.SchedulingBookingsView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.SchedulingBookingsCancel, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.SchedulingBookingsReschedule, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.SchedulingWaitlistManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.SchedulingWaitlistView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesServicePointsManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesCheckIn, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesCall, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesProgress, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesCancel, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesPriorityManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.QueuesDisplayView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.ContractsView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.ContractsManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.ContractEntitlementsReserve, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.ContractEntitlementsConsume, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.ContractEntitlementsRelease, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.EncountersView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.EncounterDraftsManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.EncountersSign, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.EncountersAmend, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PractitionersView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PractitionersManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PractitionerCredentialsVerify, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PractitionerAssignmentsManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.BillingInvoicesView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.BillingInvoicesIssue, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.BillingPaymentsView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.BillingPaymentsReceive, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.BillingPaymentsAllocate, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.MessageDeliveriesView, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.MessageTemplatesView, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.MessageTemplatesManage, platformOnly: false);
@@ -105,6 +140,17 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
+var allowedPortalOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options => options.AddPolicy("Portal", policy => policy
+    .SetIsOriginAllowed(origin =>
+    {
+        if (allowedPortalOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)) return true;
+        return builder.Environment.IsDevelopment()
+            && Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+            && uri.IsLoopback;
+    })
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
 
 var app = builder.Build();
 
@@ -118,9 +164,11 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
 }
+app.UseCors("Portal");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<QueueHub>("/hubs/queue");
 app.MapBookDocDefaultEndpoints();
 app.Run();
 

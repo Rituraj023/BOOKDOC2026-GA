@@ -1,0 +1,8 @@
+.queue-table-wrap { overflow-x: auto; }
+.queue-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.queue-table th, .queue-table td { padding: .75rem .6rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
+.queue-table th { color: #64748b; font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; }
+.queue-table tr.urgent { background: #fff7ed; }
+.queue-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.queue-actions button { padding: .4rem .6rem; }
+.queue-empty { color: #64748b; }

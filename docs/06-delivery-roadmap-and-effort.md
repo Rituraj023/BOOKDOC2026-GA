@@ -46,7 +46,7 @@ The API-managed Worker replacement, reporting platform, active legacy report rec
 
 The cross-cutting controls in [DOC-034](34-cross-cutting-platform-hardening.md) refine work already budgeted across E1 (foundation), E2 (security/platform), integration epics and E12 (hardening/pilot). They do not add a separate epic or change the consolidated ROM until a measured cache/search product, additional infrastructure or new compliance requirement is approved. Re-estimation must prevent the same telemetry, audit, resilience or recovery work from being counted in both a module and E12.
 
-[DOC-035](35-path-to-100-percent-achievement.md) sequences these existing epics against the twenty-row achievement report. Its current reported 62% baseline measures evidence maturity, not consumed engineering hours, so it must not be subtracted from this ROM.
+[DOC-035](35-path-to-100-percent-achievement.md) sequences these existing epics against the twenty-row achievement report. Its current reported 70.50% baseline measures evidence maturity, not consumed engineering hours, so it must not be subtracted from this ROM.
 
 Employee/payroll work is not included because its database and authoritative business rules have not yet been supplied. It will receive a separate discovery, mapping and estimate.
 

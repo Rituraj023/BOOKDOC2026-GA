@@ -25,7 +25,8 @@ public enum MessageDeliveryStatus
 {
     Accepted = 1,
     TransientFailure = 2,
-    PermanentFailure = 3
+    PermanentFailure = 3,
+    Suppressed = 4
 }
 
 public enum CommunicationPreferenceDecision

@@ -50,7 +50,7 @@ public sealed class FoundationReferenceSliceTests
         Assert.Equal(1, await dbContext.BranchConfigurations.IgnoreQueryFilters().CountAsync());
         Assert.Equal(2, await dbContext.AuditEvents.CountAsync());
         Assert.Equal(1, await dbContext.OutboxMessages.CountAsync());
-        Assert.Equal(1, await dbContext.MessageTemplates.IgnoreQueryFilters().CountAsync());
+        Assert.Equal(5, await dbContext.MessageTemplates.IgnoreQueryFilters().CountAsync());
 
         var tenant = TestPublicIds.DecodeTenant(scope.ServiceProvider, provisioned);
         var role = await roleManager.FindByNameAsync(BookDocRoleNames.ClinicAdministrator);

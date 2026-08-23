@@ -100,7 +100,7 @@ The current solution baseline has 50 tests: 20 unit, 7 architecture and 23 integ
 
 ## Deliberately deferred
 
-- Workforce practitioner and branch-assignment aggregates;
+- Practitioner credential and branch/service assignment aggregates are now implemented by [DOC-048](48-practitioner-credential-and-assignment-foundation.md); Admin/Portal workforce journeys and accepted professional policy remain deferred;
 - specialty catalogs and practitioner-service eligibility;
 - resource-to-resource dependencies and compatible-resource rules;
 - effective-dated capabilities and temporary downtime intervals;

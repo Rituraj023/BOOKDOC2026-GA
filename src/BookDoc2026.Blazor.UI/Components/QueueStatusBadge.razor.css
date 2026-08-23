@@ -1,0 +1,6 @@
+.queue-status { display: inline-flex; padding: .28rem .55rem; border-radius: 999px; color: #334155; background: #e2e8f0; font-size: .75rem; font-weight: 750; }
+.queue-status-called { color: #075985; background: #e0f2fe; }
+.queue-status-preparation { color: #92400e; background: #fef3c7; }
+.queue-status-inservice { color: #5b21b6; background: #ede9fe; }
+.queue-status-completed { color: #166534; background: #dcfce7; }
+.queue-status-cancelled { color: #991b1b; background: #fee2e2; }

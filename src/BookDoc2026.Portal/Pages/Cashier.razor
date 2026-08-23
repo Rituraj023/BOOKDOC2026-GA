@@ -1,0 +1,250 @@
+@page "/billing/cashier"
+@using BookDoc2026.Blazor.UI.Billing
+@using BookDoc2026.Contracts.Billing
+@using BookDoc2026.Contracts.Catalog
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject PortalSessionState Session
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Cashier | BOOKDOC2026 Portal</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to access cashier operations.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanUseCashier)
+{
+    <section class="panel"><h1>Access not granted</h1><p>Patient search, catalog and Billing permissions are required for this end-to-end cashier journey.</p></section>
+}
+else
+{
+    <div class="page-heading"><div><p class="eyebrow">Operations / Finance</p><h1>Cashier</h1><p>Issue a server-calculated invoice, receive split tender and allocate it without exposing internal identifiers.</p></div><ScopeBadge Label="Branch scoped" /></div>
+
+    @if (draft.Invoice is null)
+    {
+        <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">Step 1</p><h2>Patient and evidence</h2></div><span class="muted">Branch-scoped search</span></div>
+            <div class="inline-form"><input aria-label="Patient search" @bind="searchQuery" @bind:event="oninput" placeholder="Name, patient number, mobile or email" /><button @onclick="SearchAsync" disabled="@(busy || searchQuery.Trim().Length < 2)">Search</button></div>
+            @if (searchPerformed && patients.Count == 0) { <p class="empty">No matching patient was found.</p> }
+            @if (patients.Count > 0)
+            {
+                <div class="patient-results">@foreach (var patient in patients)
+                {
+                    <button type="button" class="patient-result @(selectedPatient?.Id == patient.Id ? "selected" : null)" @onclick="() => selectedPatient = patient">
+                        <strong>@patient.DisplayName</strong><span>@patient.PatientNumber · @(patient.BirthYear?.ToString() ?? "Year unavailable")</span><small>@(patient.MaskedMobile ?? patient.MaskedEmail ?? "No masked contact")</small>
+                    </button>
+                }</div>
+            }
+            <div class="form-grid billing-grid">
+                <label>Protected Booking ID (optional)<input @bind="bookingId" /></label>
+                <label>Protected Contract ID (optional)<input @bind="contractId" /></label>
+                <label>Currency<input maxlength="3" @bind="currency" /></label>
+                <label>Invoice note (optional)<input @bind="invoiceNotes" /></label>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">Step 2</p><h2>Invoice lines</h2></div><span class="muted">Price is entered by the authorized cashier; totals are calculated by API policy</span></div>
+            <div class="form-grid billing-grid">
+                <label>Clinical service<select @bind="serviceId"><option value="">Select service</option>@foreach (var service in services) { <option value="@service.Id">@service.Code · @service.Name</option> }</select></label>
+                <label>Quantity<input type="number" min="1" max="1000" @bind="quantity" /></label>
+                <label>Unit price<input type="number" min="0" step="0.01" @bind="unitPrice" /></label>
+                <label class="button-label"><span>Add line</span><button type="button" @onclick="AddLine">Add to invoice</button></label>
+            </div>
+            @if (draft.InvoiceLines.Count > 0)
+            {
+                <div class="table-wrap"><table><thead><tr><th>Service</th><th>Quantity</th><th>Unit price</th><th>Line total</th><th></th></tr></thead><tbody>
+                @foreach (var item in draft.InvoiceLines.Select((line, index) => (line, index)))
+                {
+                    <tr><td>@item.line.ServiceCode · @item.line.Description</td><td>@item.line.Quantity</td><td>@Money(item.line.UnitPrice)</td><td>@Money(item.line.LineTotal)</td><td><button type="button" @onclick="() => draft.RemoveInvoiceLine(item.index)">Remove</button></td></tr>
+                }
+                </tbody></table></div>
+                <BillingMoneySummary Currency="@currency" Total="@draft.InvoiceDraftTotal" Balance="@draft.InvoiceDraftTotal" />
+            }
+            <button class="primary" @onclick="IssueInvoiceAsync" disabled="@(!CanIssue)">@(busy ? "Issuing…" : "Issue invoice")</button>
+            <p class="muted">Retry retains the same request identity, allowing the API to recover the existing invoice instead of duplicating it.</p>
+        </section>
+    }
+    else
+    {
+        <section class="panel financial-document invoice-document">
+            <div class="section-heading"><div><p class="eyebrow">Issued invoice</p><h2>@draft.Invoice.InvoiceNumber</h2></div><BillingStatusBadge Status="@draft.Invoice.Status" /></div>
+            <p>Patient: <strong>@selectedPatient?.DisplayName</strong> · Issued @draft.Invoice.IssuedUtc.ToLocalTime().ToString("g")</p>
+            <BillingMoneySummary Currency="@draft.Invoice.Currency" Total="@draft.Invoice.Total" Allocated="@draft.Invoice.AllocatedAmount" Balance="@draft.Invoice.Balance" />
+            <small class="muted">Immutable snapshot @ShortHash(draft.Invoice.Snapshot.PayloadHash) · @draft.Invoice.CalculationPolicyVersion</small>
+        </section>
+
+        @if (draft.Payment is null)
+        {
+            <section class="panel">
+                <div class="section-heading"><div><p class="eyebrow">Step 3</p><h2>Receive payment</h2></div><span class="muted">Split tender supported</span></div>
+                <div class="form-grid billing-grid">
+                    <label>Method<select @bind="tenderMethod"><option>Cash</option><option>Card</option><option>Cheque</option><option>BankTransfer</option><option>Upi</option><option>Other</option></select></label>
+                    <label>Amount<input type="number" min="0.01" step="0.01" @bind="tenderAmount" /></label>
+                    <label>External reference (optional)<input @bind="tenderReference" /></label>
+                    <label class="button-label"><span>Add tender</span><button type="button" @onclick="AddTender">Add payment part</button></label>
+                </div>
+                @if (draft.Tenders.Count > 0)
+                {
+                    <div class="table-wrap"><table><thead><tr><th>Method</th><th>Reference</th><th>Amount</th><th></th></tr></thead><tbody>
+                    @foreach (var item in draft.Tenders.Select((tender, index) => (tender, index)))
+                    {
+                        <tr><td>@item.tender.Method</td><td>@(item.tender.ExternalReference ?? "—")</td><td>@Money(item.tender.Amount)</td><td><button type="button" @onclick="() => draft.RemoveTender(item.index)">Remove</button></td></tr>
+                    }
+                    </tbody></table></div>
+                    <p><strong>Tender total: @Money(draft.TenderTotal)</strong></p>
+                }
+                <label>Payment note (optional)<input @bind="paymentNotes" /></label>
+                <button class="primary" @onclick="ReceivePaymentAsync" disabled="@(busy || draft.Tenders.Count == 0)">@(busy ? "Confirming…" : "Confirm payment and receipt")</button>
+            </section>
+        }
+        else
+        {
+            <section class="panel financial-document receipt-document">
+                <div class="section-heading"><div><p class="eyebrow">Immutable receipt</p><h2>@draft.Payment.ReceiptNumber</h2></div><BillingStatusBadge Status="@draft.Payment.Status" /></div>
+                <BillingMoneySummary Currency="@draft.Payment.Currency" Total="@draft.Payment.Amount" Allocated="@draft.Payment.AllocatedAmount" Balance="@draft.Payment.UnallocatedAmount" />
+                <p>@string.Join(" + ", draft.Payment.Tenders.Select(item => $"{item.Method} {item.Amount:N2}"))</p>
+                <small class="muted">Snapshot @ShortHash(draft.Payment.ReceiptSnapshot.PayloadHash) · @draft.Payment.ReceiptSnapshot.SchemaVersion</small>
+                <div class="document-actions"><button type="button" @onclick="PrintAsync">Browser print</button></div>
+            </section>
+
+            @if (draft.Invoice.Balance > 0 && draft.Payment.UnallocatedAmount > 0)
+            {
+                <section class="panel">
+                    <div class="section-heading"><div><p class="eyebrow">Step 4</p><h2>Allocate payment</h2></div><span class="muted">Cannot exceed either remaining balance</span></div>
+                    <div class="inline-form"><input aria-label="Allocation amount" type="number" min="0.01" step="0.01" @bind="allocationAmount" /><button class="primary" @onclick="AllocateAsync" disabled="@busy">Allocate</button></div>
+                </section>
+            }
+            else if (draft.Invoice.Balance > 0)
+            {
+                <section class="panel">
+                    <h2>Payment fully allocated</h2>
+                    <p>The invoice remains part-paid with @Money(draft.Invoice.Balance) outstanding.</p>
+                    <button class="primary" @onclick="BeginAdditionalPayment">Receive another payment</button>
+                </section>
+            }
+            else
+            {
+                <section class="panel checkin-success"><h2>Invoice paid</h2><p>The immutable invoice and receipt snapshots remain available for later PDF rendering.@if (draft.Payment.UnallocatedAmount > 0) { <span> This payment still has @Money(draft.Payment.UnallocatedAmount) unallocated and requires authorized follow-up.</span> }</p><button class="primary" @onclick="StartAnother">Start another transaction</button></section>
+            }
+        }
+    }
+
+    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice @(isError ? "error-notice" : null)" aria-live="polite">@message</p> }
+}
+
+@code {
+    private readonly CashierBillingDraft draft = new();
+    private readonly List<PatientSearchResponse> patients = [];
+    private readonly List<ServiceResponse> services = [];
+    private PatientSearchResponse? selectedPatient;
+    private string branchId = string.Empty, searchQuery = string.Empty, serviceId = string.Empty, currency = "INR";
+    private string? bookingId, contractId, invoiceNotes, paymentNotes, tenderReference, message;
+    private string tenderMethod = "Cash";
+    private int quantity = 1;
+    private decimal unitPrice, tenderAmount, allocationAmount;
+    private bool busy, searchPerformed, isError;
+
+    private bool CanUseCashier => Session.HasPermission(FoundationPermissions.PatientsSearch)
+        && Session.HasPermission(FoundationPermissions.CatalogView)
+        && Session.HasPermission(FoundationPermissions.BillingInvoicesView)
+        && Session.HasPermission(FoundationPermissions.BillingInvoicesIssue)
+        && Session.HasPermission(FoundationPermissions.BillingPaymentsView)
+        && Session.HasPermission(FoundationPermissions.BillingPaymentsReceive)
+        && Session.HasPermission(FoundationPermissions.BillingPaymentsAllocate);
+    private bool CanIssue => !busy && selectedPatient is not null && draft.InvoiceLines.Count > 0
+        && draft.InvoiceDraftTotal > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated || !CanUseCashier) return;
+        branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(branchId)) { Fail("Select a branch scope when signing in."); return; }
+        await RunAsync(async () => services.AddRange((await Api.ListServicesAsync(branchId)).Where(item => item.Status == "Active")));
+    }
+
+    private Task SearchAsync() => RunAsync(async () =>
+    {
+        selectedPatient = null; patients.Clear();
+        patients.AddRange(await Api.SearchPatientsAsync(branchId, searchQuery.Trim()));
+        searchPerformed = true;
+    });
+
+    private void AddLine()
+    {
+        try
+        {
+            var service = services.Single(item => item.Id == serviceId);
+            draft.AddInvoiceLine(service.Id, service.Code, service.Name, quantity, unitPrice);
+            serviceId = string.Empty; quantity = 1; unitPrice = 0; ClearMessage();
+        }
+        catch (Exception exception) { Fail(exception.Message); }
+    }
+
+    private Task IssueInvoiceAsync() => RunAsync(async () =>
+    {
+        var request = draft.BuildInvoiceRequest(selectedPatient!.Id, bookingId, contractId, currency, invoiceNotes);
+        var invoice = await Api.IssueInvoiceAsync(branchId, request);
+        draft.CompleteInvoice(invoice);
+        tenderAmount = invoice.Balance;
+        message = invoice.IsReplay ? "The existing invoice was recovered without duplication." : "Invoice issued.";
+    }, true);
+
+    private void AddTender()
+    {
+        try { draft.AddTender(tenderMethod, tenderAmount, tenderReference, null); tenderAmount = 0; tenderReference = null; ClearMessage(); }
+        catch (Exception exception) { Fail(exception.Message); }
+    }
+
+    private Task ReceivePaymentAsync() => RunAsync(async () =>
+    {
+        var payment = await Api.ReceivePaymentAsync(branchId,
+            draft.BuildPaymentRequest(selectedPatient!.Id, currency, paymentNotes));
+        draft.CompletePayment(payment);
+        allocationAmount = Math.Min(draft.Invoice!.Balance, payment.UnallocatedAmount);
+        message = payment.IsReplay ? "The existing payment was recovered without duplication." : "Payment confirmed; receipt snapshot captured.";
+    }, true);
+
+    private Task AllocateAsync() => RunAsync(async () =>
+    {
+        var payment = await Api.AllocatePaymentAsync(branchId, draft.Payment!.Id,
+            draft.BuildAllocationRequest(allocationAmount));
+        var invoice = await Api.GetInvoiceAsync(branchId, draft.Invoice!.Id);
+        draft.CompleteAllocation(payment, invoice);
+        allocationAmount = Math.Min(invoice.Balance, payment.UnallocatedAmount);
+        message = payment.IsReplay ? "The existing allocation was recovered without duplication." : "Payment allocated.";
+    }, true);
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("print");
+
+    private void BeginAdditionalPayment()
+    {
+        try { draft.BeginAdditionalPayment(); tenderAmount = draft.Invoice!.Balance; tenderReference = null; paymentNotes = null; ClearMessage(); }
+        catch (Exception exception) { Fail(exception.Message); }
+    }
+
+    private void StartAnother()
+    {
+        draft.Reset(); patients.Clear(); selectedPatient = null; searchQuery = string.Empty; bookingId = null;
+        contractId = null; invoiceNotes = null; paymentNotes = null; searchPerformed = false; currency = "INR";
+        tenderMethod = "Cash"; tenderReference = null; tenderAmount = allocationAmount = 0; ClearMessage();
+    }
+
+    private async Task RunAsync(Func<Task> operation, bool retainsIdentity = false)
+    {
+        busy = true; ClearMessage();
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (PortalSessionRequiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { Fail(exception.Error.SafeMessage + (retainsIdentity ? " Retry will retain the same request identity." : string.Empty)); }
+        catch (Exception exception) { Fail(exception.Message); }
+        finally { busy = false; }
+    }
+
+    private string Money(decimal amount) => $"{currency.ToUpperInvariant()} {amount:N2}";
+    private static string ShortHash(string hash) => hash.Length <= 12 ? hash : $"{hash[..12]}…";
+    private void Fail(string value) { message = value; isError = true; }
+    private void ClearMessage() { message = null; isError = false; }
+}

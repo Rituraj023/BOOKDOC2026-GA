@@ -25,6 +25,12 @@ public sealed class SchedulingRepository(BookDocDbContext dbContext) : IScheduli
     public Task<bool> PatientExistsAsync(long patientId, CancellationToken cancellationToken) =>
         dbContext.Patients.AnyAsync(x => x.Id == patientId, cancellationToken);
 
+    public Task<long?> GetPatientStakeholderIdAsync(long patientId, CancellationToken cancellationToken) =>
+        dbContext.Patients
+            .Where(patient => patient.Id == patientId)
+            .Select(patient => (long?)patient.StakeholderId)
+            .SingleOrDefaultAsync(cancellationToken);
+
     public Task<bool> ResourceSupportsServiceAsync(long resourceId, long serviceId, CancellationToken cancellationToken) =>
         dbContext.ResourceCapabilities.AnyAsync(x => x.ResourceId == resourceId && x.ServiceId == serviceId && x.IsActive, cancellationToken);
 
@@ -54,7 +60,9 @@ public sealed class SchedulingRepository(BookDocDbContext dbContext) : IScheduli
         await (from reservation in dbContext.ResourceReservations
                join hold in dbContext.SchedulingHolds on new { reservation.TenantId, Id = reservation.HoldId } equals new { hold.TenantId, hold.Id }
                where resourceIds.Contains(reservation.ResourceId) && reservation.StartUtc < endUtc && reservation.EndUtc > startUtc
-                   && (hold.Status == SchedulingHoldStatus.Confirmed || (hold.Status == SchedulingHoldStatus.Active && hold.ExpiresUtc > now))
+                   && ((hold.Status == SchedulingHoldStatus.Active && hold.ExpiresUtc > now)
+                       || (hold.Status == SchedulingHoldStatus.Confirmed
+                           && dbContext.Bookings.Any(booking => booking.HoldId == hold.Id && booking.Status == BookingStatus.Confirmed)))
                group reservation by reservation.ResourceId into groupRows
                select new { ResourceId = groupRows.Key, Quantity = groupRows.Sum(x => x.Quantity) })
             .ToDictionaryAsync(x => x.ResourceId, x => x.Quantity, cancellationToken);
@@ -145,6 +153,364 @@ public sealed class SchedulingRepository(BookDocDbContext dbContext) : IScheduli
         if (hold is null) return null;
         var reservations = await dbContext.ResourceReservations.Where(x => x.HoldId == hold.Id).ToListAsync(cancellationToken);
         return new(hold, reservations);
+    }
+
+    public async Task<BookingConfirmationResult> ConfirmHoldAtomicallyAsync(
+        Booking booking,
+        IReadOnlyCollection<BookingResourceAllocation> resources,
+        AuditEvent auditEvent,
+        OutboxMessage outboxMessage,
+        long expectedHoldVersion,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (!dbContext.Database.IsRelational())
+        {
+            await InMemoryHoldGate.WaitAsync(cancellationToken);
+            try
+            {
+                return await ConfirmHoldCoreAsync(
+                    booking, resources, auditEvent, outboxMessage, expectedHoldVersion, now, cancellationToken);
+            }
+            finally
+            {
+                InMemoryHoldGate.Release();
+            }
+        }
+
+        if (dbContext.Database.CurrentTransaction is not null)
+        {
+            return await ConfirmRelationalCoreAsync(
+                booking, resources, auditEvent, outboxMessage, expectedHoldVersion, now, cancellationToken);
+        }
+
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable,
+                cancellationToken);
+            var result = await ConfirmRelationalCoreAsync(
+                booking, resources, auditEvent, outboxMessage, expectedHoldVersion, now, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        });
+    }
+
+    private async Task<BookingConfirmationResult> ConfirmRelationalCoreAsync(
+        Booking booking,
+        IReadOnlyCollection<BookingResourceAllocation> resources,
+        AuditEvent auditEvent,
+        OutboxMessage outboxMessage,
+        long expectedHoldVersion,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"EXEC sp_getapplock @Resource={"BOOKDOC:CONFIRM:" + booking.TenantId + ":" + booking.HoldId}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000",
+            cancellationToken);
+        foreach (var resourceId in resources.Select(resource => resource.ResourceId).Order())
+        {
+            await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"EXEC sp_getapplock @Resource={"BOOKDOC:RESOURCE:" + booking.TenantId + ":" + resourceId}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000",
+                cancellationToken);
+        }
+
+        return await ConfirmHoldCoreAsync(
+            booking, resources, auditEvent, outboxMessage, expectedHoldVersion, now, cancellationToken);
+    }
+
+    private async Task<BookingConfirmationResult> ConfirmHoldCoreAsync(
+        Booking booking,
+        IReadOnlyCollection<BookingResourceAllocation> resources,
+        AuditEvent auditEvent,
+        OutboxMessage outboxMessage,
+        long expectedHoldVersion,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var existing = await dbContext.Bookings
+            .SingleOrDefaultAsync(candidate => candidate.HoldId == booking.HoldId, cancellationToken);
+        if (existing is not null)
+        {
+            var existingResources = await dbContext.BookingResourceAllocations
+                .Where(resource => resource.BookingId == existing.Id)
+                .ToListAsync(cancellationToken);
+            return new(new(existing, existingResources), true);
+        }
+
+        var hold = await dbContext.SchedulingHolds
+            .SingleOrDefaultAsync(candidate => candidate.BranchId == booking.BranchId
+                && candidate.Id == booking.HoldId, cancellationToken)
+            ?? throw new NotFoundException("Scheduling hold was not found.");
+        if (dbContext.Database.IsRelational())
+            await dbContext.Entry(hold).ReloadAsync(cancellationToken);
+        var reservations = await dbContext.ResourceReservations
+            .Where(reservation => reservation.HoldId == hold.Id)
+            .ToListAsync(cancellationToken);
+        if (booking.TenantId != hold.TenantId
+            || booking.PatientId != hold.PatientId
+            || booking.ServiceId != hold.ServiceId
+            || booking.StartUtc != hold.StartUtc
+            || booking.EndUtc != hold.EndUtc)
+            throw new DomainRuleException("Booking details do not match the held schedule.");
+
+        var allocationByReservation = resources.ToDictionary(resource => resource.HoldReservationId);
+        if (allocationByReservation.Count != reservations.Count
+            || reservations.Any(reservation =>
+                !allocationByReservation.TryGetValue(reservation.Id, out var allocation)
+                || allocation.ResourceId != reservation.ResourceId
+                || allocation.Quantity != reservation.Quantity
+                || !string.Equals(
+                    allocation.RequirementRoleCode,
+                    reservation.RequirementRoleCode,
+                    StringComparison.Ordinal)))
+            throw new DomainRuleException("Booking resources do not match the held reservations.");
+
+        var resourceIds = reservations.Select(reservation => reservation.ResourceId).ToArray();
+        var bookableResources = await dbContext.BookableResources
+            .Where(resource => resource.BranchId == hold.BranchId && resourceIds.Contains(resource.Id))
+            .ToDictionaryAsync(resource => resource.Id, cancellationToken);
+        var requirements = await dbContext.ServiceResourceRequirements
+            .Where(requirement => requirement.ServiceId == hold.ServiceId)
+            .ToListAsync(cancellationToken);
+        SchedulingRequirementEvaluator.EnsureComplete(reservations, bookableResources, requirements);
+
+        hold.Confirm(expectedHoldVersion, now);
+        await dbContext.Bookings.AddAsync(booking, cancellationToken);
+        await dbContext.BookingResourceAllocations.AddRangeAsync(resources, cancellationToken);
+        await dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken);
+        await dbContext.OutboxMessages.AddAsync(outboxMessage, cancellationToken);
+        await SaveChangesAsync(cancellationToken);
+        return new(new(booking, resources), false);
+    }
+
+    public async Task<BookingAggregate?> GetBookingAsync(
+        long branchId,
+        long bookingId,
+        CancellationToken cancellationToken)
+    {
+        var booking = await dbContext.Bookings
+            .AsNoTracking()
+            .SingleOrDefaultAsync(candidate => candidate.BranchId == branchId && candidate.Id == bookingId,
+                cancellationToken);
+        if (booking is null) return null;
+        var resources = await dbContext.BookingResourceAllocations
+            .AsNoTracking()
+            .Where(resource => resource.BookingId == booking.Id)
+            .ToListAsync(cancellationToken);
+        return new(booking, resources);
+    }
+
+    public async Task<BookingAggregate?> GetBookingByHoldAsync(
+        long branchId,
+        long holdId,
+        CancellationToken cancellationToken)
+    {
+        var booking = await dbContext.Bookings
+            .AsNoTracking()
+            .SingleOrDefaultAsync(candidate => candidate.BranchId == branchId && candidate.HoldId == holdId,
+                cancellationToken);
+        if (booking is null) return null;
+        var resources = await dbContext.BookingResourceAllocations
+            .AsNoTracking()
+            .Where(resource => resource.BookingId == booking.Id)
+            .ToListAsync(cancellationToken);
+        return new(booking, resources);
+    }
+
+    public async Task<BookingAggregate> CancelBookingAtomicallyAsync(
+        long branchId,
+        long bookingId,
+        long expectedVersion,
+        string reason,
+        AuditEvent auditEvent,
+        OutboxMessage outboxMessage,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) =>
+        await ExecuteLifecycleAsync(
+            $"BOOKDOC:BOOKING:{bookingId}",
+            async () =>
+            {
+                var booking = await dbContext.Bookings.SingleOrDefaultAsync(
+                    candidate => candidate.BranchId == branchId && candidate.Id == bookingId,
+                    cancellationToken) ?? throw new NotFoundException("Booking was not found.");
+                if (dbContext.Database.IsRelational()) await dbContext.Entry(booking).ReloadAsync(cancellationToken);
+                var resources = await dbContext.BookingResourceAllocations
+                    .Where(resource => resource.BookingId == booking.Id).ToListAsync(cancellationToken);
+                booking.Cancel(expectedVersion, reason, now);
+                await dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken);
+                await dbContext.OutboxMessages.AddAsync(outboxMessage, cancellationToken);
+                await SaveChangesAsync(cancellationToken);
+                return new BookingAggregate(booking, resources);
+            },
+            cancellationToken);
+
+    public async Task<BookingConfirmationResult> RescheduleBookingAtomicallyAsync(
+        long originalBookingId,
+        Booking replacement,
+        IReadOnlyCollection<BookingResourceAllocation> resources,
+        long expectedBookingVersion,
+        long expectedHoldVersion,
+        string reason,
+        AuditEvent auditEvent,
+        OutboxMessage outboxMessage,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) =>
+        await ExecuteLifecycleAsync(
+            $"BOOKDOC:RESCHEDULE:{replacement.TenantId}:{originalBookingId}:{replacement.HoldId}",
+            async () =>
+            {
+                var existing = await dbContext.Bookings.SingleOrDefaultAsync(
+                    candidate => candidate.HoldId == replacement.HoldId, cancellationToken);
+                if (existing is not null)
+                {
+                    if (existing.PreviousBookingId != originalBookingId)
+                        throw new DomainRuleException("The replacement hold already belongs to another booking.");
+                    var existingResources = await dbContext.BookingResourceAllocations
+                        .Where(resource => resource.BookingId == existing.Id).ToListAsync(cancellationToken);
+                    return new BookingConfirmationResult(new(existing, existingResources), true);
+                }
+
+                var original = await dbContext.Bookings.SingleOrDefaultAsync(
+                    candidate => candidate.Id == originalBookingId && candidate.BranchId == replacement.BranchId,
+                    cancellationToken) ?? throw new NotFoundException("Booking was not found.");
+                if (dbContext.Database.IsRelational()) await dbContext.Entry(original).ReloadAsync(cancellationToken);
+                var hold = await LoadAndValidateReplacementHoldAsync(replacement, resources, cancellationToken);
+                original.ReplaceWith(replacement.Id, expectedBookingVersion, reason, now);
+                hold.Confirm(expectedHoldVersion, now);
+                await dbContext.Bookings.AddAsync(replacement, cancellationToken);
+                await dbContext.BookingResourceAllocations.AddRangeAsync(resources, cancellationToken);
+                await dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken);
+                await dbContext.OutboxMessages.AddAsync(outboxMessage, cancellationToken);
+                await SaveChangesAsync(cancellationToken);
+                return new BookingConfirmationResult(new(replacement, resources), false);
+            },
+            cancellationToken);
+
+    public Task AddWaitlistAsync(BookingWaitlistEntry entry, AuditEvent auditEvent, CancellationToken cancellationToken)
+    {
+        dbContext.BookingWaitlistEntries.Add(entry);
+        dbContext.AuditEvents.Add(auditEvent);
+        return Task.CompletedTask;
+    }
+
+    public Task AddAuditEventAsync(AuditEvent auditEvent, CancellationToken cancellationToken) =>
+        dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken).AsTask();
+
+    public async Task<BookingWaitlistEntry?> GetWaitlistAsync(
+        long branchId,
+        long waitlistId,
+        bool tracked,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.BookingWaitlistEntries.Where(entry => entry.BranchId == branchId && entry.Id == waitlistId);
+        return await (tracked ? query : query.AsNoTracking()).SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<WaitlistPromotionResult> PromoteWaitlistAtomicallyAsync(
+        long waitlistId,
+        Booking booking,
+        IReadOnlyCollection<BookingResourceAllocation> resources,
+        long expectedWaitlistVersion,
+        long expectedHoldVersion,
+        AuditEvent auditEvent,
+        OutboxMessage outboxMessage,
+        DateTimeOffset now,
+        CancellationToken cancellationToken) =>
+        await ExecuteLifecycleAsync(
+            $"BOOKDOC:WAITLIST:{booking.TenantId}:{waitlistId}",
+            async () =>
+            {
+                var waitlist = await dbContext.BookingWaitlistEntries.SingleOrDefaultAsync(
+                    entry => entry.Id == waitlistId && entry.BranchId == booking.BranchId,
+                    cancellationToken) ?? throw new NotFoundException("Waitlist entry was not found.");
+                if (dbContext.Database.IsRelational()) await dbContext.Entry(waitlist).ReloadAsync(cancellationToken);
+                if (waitlist.Status == BookingWaitlistStatus.Promoted && waitlist.PromotedBookingId.HasValue)
+                {
+                    var existing = await dbContext.Bookings.SingleAsync(
+                        candidate => candidate.Id == waitlist.PromotedBookingId.Value, cancellationToken);
+                    var existingResources = await dbContext.BookingResourceAllocations
+                        .Where(resource => resource.BookingId == existing.Id).ToListAsync(cancellationToken);
+                    return new WaitlistPromotionResult(new(existing, existingResources), waitlist, true);
+                }
+
+                var hold = await LoadAndValidateReplacementHoldAsync(booking, resources, cancellationToken);
+                if (waitlist.PatientId != booking.PatientId || waitlist.ServiceId != booking.ServiceId
+                    || booking.StartUtc < waitlist.EarliestStartUtc || booking.StartUtc > waitlist.LatestStartUtc)
+                    throw new DomainRuleException("The held schedule does not match the waitlist entry.");
+                hold.Confirm(expectedHoldVersion, now);
+                waitlist.Promote(booking.Id, expectedWaitlistVersion, now);
+                await dbContext.Bookings.AddAsync(booking, cancellationToken);
+                await dbContext.BookingResourceAllocations.AddRangeAsync(resources, cancellationToken);
+                await dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken);
+                await dbContext.OutboxMessages.AddAsync(outboxMessage, cancellationToken);
+                await SaveChangesAsync(cancellationToken);
+                return new WaitlistPromotionResult(new(booking, resources), waitlist, false);
+            },
+            cancellationToken);
+
+    private async Task<SchedulingHold> LoadAndValidateReplacementHoldAsync(
+        Booking booking,
+        IReadOnlyCollection<BookingResourceAllocation> resources,
+        CancellationToken cancellationToken)
+    {
+        var hold = await dbContext.SchedulingHolds.SingleOrDefaultAsync(
+            candidate => candidate.Id == booking.HoldId && candidate.BranchId == booking.BranchId,
+            cancellationToken) ?? throw new NotFoundException("Replacement scheduling hold was not found.");
+        if (dbContext.Database.IsRelational()) await dbContext.Entry(hold).ReloadAsync(cancellationToken);
+        var reservations = await dbContext.ResourceReservations
+            .Where(reservation => reservation.HoldId == hold.Id).ToListAsync(cancellationToken);
+        if (booking.TenantId != hold.TenantId || booking.PatientId != hold.PatientId
+            || booking.ServiceId != hold.ServiceId || booking.StartUtc != hold.StartUtc || booking.EndUtc != hold.EndUtc)
+            throw new DomainRuleException("Booking details do not match the replacement hold.");
+        var allocationByReservation = resources.ToDictionary(resource => resource.HoldReservationId);
+        if (allocationByReservation.Count != reservations.Count || reservations.Any(reservation =>
+                !allocationByReservation.TryGetValue(reservation.Id, out var allocation)
+                || allocation.ResourceId != reservation.ResourceId || allocation.Quantity != reservation.Quantity
+                || !string.Equals(allocation.RequirementRoleCode, reservation.RequirementRoleCode, StringComparison.Ordinal)))
+            throw new DomainRuleException("Booking resources do not match the replacement hold.");
+        var resourceIds = reservations.Select(reservation => reservation.ResourceId).ToArray();
+        var bookableResources = await dbContext.BookableResources
+            .Where(resource => resource.BranchId == hold.BranchId && resourceIds.Contains(resource.Id))
+            .ToDictionaryAsync(resource => resource.Id, cancellationToken);
+        var requirements = await dbContext.ServiceResourceRequirements
+            .Where(requirement => requirement.ServiceId == hold.ServiceId).ToListAsync(cancellationToken);
+        SchedulingRequirementEvaluator.EnsureComplete(reservations, bookableResources, requirements);
+        return hold;
+    }
+
+    private async Task<T> ExecuteLifecycleAsync<T>(
+        string lockName,
+        Func<Task<T>> action,
+        CancellationToken cancellationToken)
+    {
+        if (!dbContext.Database.IsRelational())
+        {
+            await InMemoryHoldGate.WaitAsync(cancellationToken);
+            try { return await action(); }
+            finally { InMemoryHoldGate.Release(); }
+        }
+
+        if (dbContext.Database.CurrentTransaction is not null)
+        {
+            await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"EXEC sp_getapplock @Resource={lockName}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000",
+                cancellationToken);
+            return await action();
+        }
+
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            await dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $"EXEC sp_getapplock @Resource={lockName}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000",
+                cancellationToken);
+            var result = await action();
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        });
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken)

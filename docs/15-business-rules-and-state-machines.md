@@ -21,6 +21,8 @@
 | Orthopaedic procedure plan | Proposed, ConsentPending, Scheduled, Completed, Cancelled, Referred | body site/laterality and consent confirmed; completion requires a procedure record, not calendar status alone |
 | Invoice | Draft, Issued, PartPaid, Paid, Voided, Refunded | issued number/tax/price snapshot immutable; void/reversal controlled |
 | Payment | Initiated, Pending, Confirmed, Failed, Reversed, Refunded | provider callback idempotent; allocation never exceeds confirmed amount |
+
+DOC-049 implements the direct clinic-receipt subset as `Confirmed -> FullyAllocated`, with partial allocation represented by the confirmed Payment balance. Provider `Initiated/Pending/Failed`, reversal and refund remain unimplemented until their separate command/policy matrices are approved. Invoice issue currently uses `Issued -> PartPaid -> Paid`; void/credit-note behavior is deferred rather than inferred.
 | Message job | Queued, Claimed, Succeeded, RetryScheduled, DeadLettered, Cancelled | bounded retry; external ambiguity visible; no SignalR execution |
 | Report execution | Queued, Running, Completed, Failed, Expired, Cancelled | authorization at request and retrieval; immutable official snapshot selective |
 | Print job | Queued, Claimed, Printed, Failed, Expired, Cancelled | branch-bound agent; claim/acknowledgement idempotent; reprint explicit |

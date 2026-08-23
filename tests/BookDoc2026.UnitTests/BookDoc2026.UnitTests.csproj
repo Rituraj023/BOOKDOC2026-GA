@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\BookDoc2026.Application\BookDoc2026.Application.csproj" />
     <ProjectReference Include="..\..\src\BookDoc2026.Admin\BookDoc2026.Admin.csproj" />
     <ProjectReference Include="..\..\src\BookDoc2026.Client\BookDoc2026.Client.csproj" />
+    <ProjectReference Include="..\..\src\BookDoc2026.Blazor.UI\BookDoc2026.Blazor.UI.csproj" />
     <ProjectReference Include="..\..\src\BookDoc2026.Contracts\BookDoc2026.Contracts.csproj" />
     <ProjectReference Include="..\..\src\BookDoc2026.DocumentService\BookDoc2026.DocumentService.csproj" />
     <ProjectReference Include="..\..\src\BookDoc2026.ErrorHandling\BookDoc2026.ErrorHandling.csproj" />

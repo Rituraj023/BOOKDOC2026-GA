@@ -57,7 +57,7 @@ Contracts <- Client        API composition
 | Platform (`identity`, `platform`, `audit`, `messaging`, `scheduler`, `files`) | independent-clinic tenant lifecycle, identity, permissions, scopes, audit, outbox, notifications, jobs, documents | Yes | All |
 | Organization (`org`) | organization, clinic, branch, room, settings, numbering | Yes | Hospital, inventory, finance |
 | Patient Registry (`patient`) | patient identity, contacts, relations, consent, alerts, merge lineage | Yes | All care modules |
-| Workforce (`workforce`) | employee, practitioner, specialty, qualifications, branch assignment | Yes | Hospital, HR |
+| Workforce (`workforce`) | Practitioner profile, credentials and effective branch/service assignments; future Employee kept as a separate aggregate | Practitioner foundation yes; Employee/Payroll no | Clinical, Scheduling, future HR |
 | Catalog/Resources (`catalog`, `resource`) | services, procedures, categorized practitioners/spaces/beds/modalities/equipment/teams, medications, investigations, prices | Yes | Billing, lab, radiology, pharmacy |
 | Scheduling (`scheduling`) | resource availability, slot/hold, request, multi-resource booking, waitlist | Yes | Inpatient procedures, imaging, OT |
 | Queue (`queue`) | service points, tickets, stages, assignment, priority, SLA events | Yes | OPD, X-ray/CT/MRI, lab, pharmacy, billing |

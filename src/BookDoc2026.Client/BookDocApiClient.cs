@@ -1,10 +1,308 @@
 using System.Net.Http.Json;
 using BookDoc2026.Contracts.Communications;
+using BookDoc2026.Contracts.Billing;
+using BookDoc2026.Contracts.Catalog;
+using BookDoc2026.Contracts.Contracts;
+using BookDoc2026.Contracts.Clinical;
+using BookDoc2026.Contracts.Patients;
+using BookDoc2026.Contracts.Queues;
+using BookDoc2026.Contracts.Scheduling;
+using BookDoc2026.Contracts.Workforce;
 
 namespace BookDoc2026.Client;
 
 public sealed class BookDocApiClient(HttpClient httpClient)
 {
+    public Task<IReadOnlyCollection<InvoiceResponse>> ListInvoicesAsync(string branchId, int take = 50,
+        CancellationToken cancellationToken = default) => GetAsync<IReadOnlyCollection<InvoiceResponse>>(
+        $"{BillingUrl(branchId, "invoices")}?take={take}", cancellationToken);
+
+    public Task<InvoiceResponse> IssueInvoiceAsync(string branchId, IssueInvoiceRequest request,
+        CancellationToken cancellationToken = default) => PostAsync<IssueInvoiceRequest, InvoiceResponse>(
+        BillingUrl(branchId, "invoices"), request, cancellationToken);
+
+    public Task<InvoiceResponse> GetInvoiceAsync(string branchId, string invoiceId,
+        CancellationToken cancellationToken = default) => GetAsync<InvoiceResponse>(
+        BillingUrl(branchId, $"invoices/{Uri.EscapeDataString(invoiceId)}"), cancellationToken);
+
+    public Task<PaymentResponse> ReceivePaymentAsync(string branchId, ReceivePaymentRequest request,
+        CancellationToken cancellationToken = default) => PostAsync<ReceivePaymentRequest, PaymentResponse>(
+        BillingUrl(branchId, "payments"), request, cancellationToken);
+
+    public Task<IReadOnlyCollection<PaymentResponse>> ListPaymentsAsync(string branchId, int take = 50,
+        CancellationToken cancellationToken = default) => GetAsync<IReadOnlyCollection<PaymentResponse>>(
+        $"{BillingUrl(branchId, "payments")}?take={take}", cancellationToken);
+
+    public Task<PaymentResponse> GetPaymentAsync(string branchId, string paymentId,
+        CancellationToken cancellationToken = default) => GetAsync<PaymentResponse>(
+        BillingUrl(branchId, $"payments/{Uri.EscapeDataString(paymentId)}"), cancellationToken);
+
+    public Task<PaymentResponse> AllocatePaymentAsync(string branchId, string paymentId,
+        AllocatePaymentRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<AllocatePaymentRequest, PaymentResponse>(
+            BillingUrl(branchId, $"payments/{Uri.EscapeDataString(paymentId)}/allocations"), request,
+            cancellationToken);
+
+    public Task<PractitionerResponse> CreatePractitionerAsync(string branchId, CreatePractitionerRequest request,
+        CancellationToken cancellationToken = default) => PostAsync<CreatePractitionerRequest, PractitionerResponse>(
+        PractitionerUrl(branchId), request, cancellationToken);
+
+    public Task<PractitionerResponse> GetPractitionerAsync(string branchId, string practitionerId,
+        CancellationToken cancellationToken = default) => GetAsync<PractitionerResponse>(
+        PractitionerUrl(branchId, practitionerId), cancellationToken);
+
+    public Task<PractitionerResponse> AddPractitionerCredentialAsync(string branchId, string practitionerId,
+        AddPractitionerCredentialRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<AddPractitionerCredentialRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/credentials", request, cancellationToken);
+
+    public Task<PractitionerResponse> VerifyPractitionerCredentialAsync(string branchId, string practitionerId,
+        string credentialId, DecidePractitionerCredentialRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<DecidePractitionerCredentialRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/credentials/{Uri.EscapeDataString(credentialId)}/verify",
+            request, cancellationToken);
+
+    public Task<PractitionerResponse> RejectPractitionerCredentialAsync(string branchId, string practitionerId,
+        string credentialId, DecidePractitionerCredentialRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<DecidePractitionerCredentialRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/credentials/{Uri.EscapeDataString(credentialId)}/reject",
+            request, cancellationToken);
+
+    public Task<PractitionerResponse> AddPractitionerAssignmentAsync(string branchId, string practitionerId,
+        AddPractitionerAssignmentRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<AddPractitionerAssignmentRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/assignments", request, cancellationToken);
+
+    public Task<PractitionerResponse> ActivatePractitionerAsync(string branchId, string practitionerId,
+        long expectedVersion, CancellationToken cancellationToken = default) =>
+        PostAsync<ChangePractitionerStatusRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/activate",
+            new ChangePractitionerStatusRequest(expectedVersion), cancellationToken);
+
+    public Task<PractitionerResponse> SuspendPractitionerAsync(string branchId, string practitionerId,
+        long expectedVersion, CancellationToken cancellationToken = default) => PractitionerStatusAsync(
+            branchId, practitionerId, "suspend", expectedVersion, cancellationToken);
+
+    public Task<PractitionerResponse> DeactivatePractitionerAsync(string branchId, string practitionerId,
+        long expectedVersion, CancellationToken cancellationToken = default) => PractitionerStatusAsync(
+            branchId, practitionerId, "deactivate", expectedVersion, cancellationToken);
+
+    public Task<PractitionerResponse> SuspendPractitionerAssignmentAsync(string branchId, string practitionerId,
+        string assignmentId, long expectedVersion, CancellationToken cancellationToken = default) =>
+        PractitionerAssignmentStatusAsync(branchId, practitionerId, assignmentId, "suspend", expectedVersion,
+            cancellationToken);
+
+    public Task<PractitionerResponse> EndPractitionerAssignmentAsync(string branchId, string practitionerId,
+        string assignmentId, long expectedVersion, CancellationToken cancellationToken = default) =>
+        PractitionerAssignmentStatusAsync(branchId, practitionerId, assignmentId, "end", expectedVersion,
+            cancellationToken);
+
+    public Task<EncounterResponse> StartEncounterAsync(
+        string branchId, StartEncounterRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<StartEncounterRequest, EncounterResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters", request, cancellationToken);
+
+    public Task<EncounterResponse> GetEncounterAsync(
+        string branchId, string encounterId, CancellationToken cancellationToken = default) =>
+        GetAsync<EncounterResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}",
+            cancellationToken);
+
+    public Task<EncounterResponse> ReviseEncounterDraftAsync(
+        string branchId, string encounterId, ReviseEncounterDraftRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ReviseEncounterDraftRequest, EncounterResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/draft-revisions",
+            request, cancellationToken);
+
+    public Task<EncounterResponse> SignEncounterAsync(
+        string branchId, string encounterId, SignEncounterRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<SignEncounterRequest, EncounterResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/sign",
+            request, cancellationToken);
+
+    public Task<EncounterResponse> AmendEncounterAsync(
+        string branchId, string encounterId, AmendEncounterRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<AmendEncounterRequest, EncounterResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/amendments",
+            request, cancellationToken);
+
+    public Task<ContractResponse> CreateContractAsync(
+        string branchId, CreateContractRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<CreateContractRequest, ContractResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts", request, cancellationToken);
+
+    public Task<ContractResponse> GetContractAsync(
+        string branchId, string contractId, CancellationToken cancellationToken = default) =>
+        GetAsync<ContractResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/{Uri.EscapeDataString(contractId)}",
+            cancellationToken);
+
+    public Task<EntitlementReservationResponse> ReserveContractEntitlementAsync(
+        string branchId, string contractId, string entitlementId, ReserveEntitlementRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ReserveEntitlementRequest, EntitlementReservationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/{Uri.EscapeDataString(contractId)}/entitlements/{Uri.EscapeDataString(entitlementId)}/reservations",
+            request, cancellationToken);
+
+    public Task<EntitlementReservationResponse> ConsumeContractEntitlementAsync(
+        string branchId, string reservationId, ConsumeEntitlementReservationRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ConsumeEntitlementReservationRequest, EntitlementReservationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/entitlement-reservations/{Uri.EscapeDataString(reservationId)}/consume",
+            request, cancellationToken);
+
+    public Task<EntitlementReservationResponse> ReleaseContractEntitlementAsync(
+        string branchId, string reservationId, ReleaseEntitlementReservationRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ReleaseEntitlementReservationRequest, EntitlementReservationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/entitlement-reservations/{Uri.EscapeDataString(reservationId)}/release",
+            request, cancellationToken);
+
+    public Task<IReadOnlyCollection<PatientSearchResponse>> SearchPatientsAsync(
+        string branchId,
+        string query,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<PatientSearchResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients?q={Uri.EscapeDataString(query)}",
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<ServiceResponse>> ListServicesAsync(
+        string branchId,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<ServiceResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/catalog/services?includeInactive={includeInactive.ToString().ToLowerInvariant()}",
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<ImagingServicePointResponse>> ListImagingServicePointsAsync(
+        string branchId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<ImagingServicePointResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/imaging-service-points",
+            cancellationToken);
+
+    public Task<ImagingServicePointResponse> CreateImagingServicePointAsync(
+        string branchId,
+        CreateImagingServicePointRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<CreateImagingServicePointRequest, ImagingServicePointResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/imaging-service-points",
+            request, cancellationToken);
+
+    public Task<QueueTicketResponse> CheckInQueueTicketAsync(
+        string branchId,
+        CheckInQueueTicketRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<CheckInQueueTicketRequest, QueueTicketResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/tickets",
+            request, cancellationToken);
+
+    public Task<IReadOnlyCollection<QueueTicketResponse>> ListQueueTicketsAsync(
+        string branchId,
+        string servicePointId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<QueueTicketResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/imaging-service-points/{Uri.EscapeDataString(servicePointId)}/tickets",
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<QueueDisplayTicketResponse>> GetQueueDisplayAsync(
+        string branchId,
+        string servicePointId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<QueueDisplayTicketResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/imaging-service-points/{Uri.EscapeDataString(servicePointId)}/display",
+            cancellationToken);
+
+    public Task<QueueTicketResponse> TransitionQueueTicketAsync(
+        string branchId,
+        string ticketId,
+        string action,
+        QueueTransitionRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<QueueTransitionRequest, QueueTicketResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/tickets/{Uri.EscapeDataString(ticketId)}/{Uri.EscapeDataString(action)}",
+            request, cancellationToken);
+
+    public Task<BookingResponse> ConfirmSchedulingHoldAsync(
+        string branchId,
+        string holdId,
+        long expectedVersion,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ConfirmSchedulingHoldRequest, BookingResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/holds/{Uri.EscapeDataString(holdId)}/confirm",
+            new ConfirmSchedulingHoldRequest(expectedVersion),
+            cancellationToken);
+
+    public Task<BookingResponse> GetBookingAsync(
+        string branchId,
+        string bookingId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<BookingResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/bookings/{Uri.EscapeDataString(bookingId)}",
+            cancellationToken);
+
+    public Task<BookingResponse> CancelBookingAsync(
+        string branchId,
+        string bookingId,
+        CancelBookingRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<CancelBookingRequest, BookingResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/bookings/{Uri.EscapeDataString(bookingId)}/cancel",
+            request,
+            cancellationToken);
+
+    public Task<BookingResponse> RescheduleBookingAsync(
+        string branchId,
+        string bookingId,
+        RescheduleBookingRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<RescheduleBookingRequest, BookingResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/bookings/{Uri.EscapeDataString(bookingId)}/reschedule",
+            request,
+            cancellationToken);
+
+    public Task<BookingWaitlistResponse> CreateBookingWaitlistAsync(
+        string branchId,
+        CreateBookingWaitlistRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<CreateBookingWaitlistRequest, BookingWaitlistResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/waitlist",
+            request,
+            cancellationToken);
+
+    public Task<BookingWaitlistResponse> GetBookingWaitlistAsync(
+        string branchId,
+        string waitlistId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<BookingWaitlistResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/waitlist/{Uri.EscapeDataString(waitlistId)}",
+            cancellationToken);
+
+    public Task<BookingWaitlistResponse> WithdrawBookingWaitlistAsync(
+        string branchId,
+        string waitlistId,
+        WithdrawBookingWaitlistRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<WithdrawBookingWaitlistRequest, BookingWaitlistResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/waitlist/{Uri.EscapeDataString(waitlistId)}/withdraw",
+            request,
+            cancellationToken);
+
+    public Task<BookingResponse> PromoteBookingWaitlistAsync(
+        string branchId,
+        string waitlistId,
+        PromoteBookingWaitlistRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<PromoteBookingWaitlistRequest, BookingResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/scheduling/waitlist/{Uri.EscapeDataString(waitlistId)}/promote",
+            request,
+            cancellationToken);
+
     public Task<IReadOnlyCollection<MessageTemplateResponse>> ListMessageTemplatesAsync(
         string branchId,
         CancellationToken cancellationToken = default) =>
@@ -104,4 +402,23 @@ public sealed class BookDocApiClient(HttpClient httpClient)
     private static string PreferenceUrl(string branchId, string stakeholderId) =>
         $"api/v1/branches/{Uri.EscapeDataString(branchId)}/communications/stakeholders/" +
         $"{Uri.EscapeDataString(stakeholderId)}/preferences";
+
+    private static string PractitionerUrl(string branchId, string? practitionerId = null) =>
+        $"api/v1/branches/{Uri.EscapeDataString(branchId)}/practitioners" +
+        (string.IsNullOrWhiteSpace(practitionerId) ? string.Empty : $"/{Uri.EscapeDataString(practitionerId)}");
+
+    private Task<PractitionerResponse> PractitionerStatusAsync(string branchId, string practitionerId,
+        string action, long expectedVersion, CancellationToken cancellationToken) =>
+        PostAsync<ChangePractitionerStatusRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/{action}",
+            new ChangePractitionerStatusRequest(expectedVersion), cancellationToken);
+
+    private Task<PractitionerResponse> PractitionerAssignmentStatusAsync(string branchId, string practitionerId,
+        string assignmentId, string action, long expectedVersion, CancellationToken cancellationToken) =>
+        PostAsync<ChangePractitionerStatusRequest, PractitionerResponse>(
+            $"{PractitionerUrl(branchId, practitionerId)}/assignments/{Uri.EscapeDataString(assignmentId)}/{action}",
+            new ChangePractitionerStatusRequest(expectedVersion), cancellationToken);
+
+    private static string BillingUrl(string branchId, string path) =>
+        $"api/v1/branches/{Uri.EscapeDataString(branchId)}/billing/{path}";
 }

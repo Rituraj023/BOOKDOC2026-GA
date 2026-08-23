@@ -1,0 +1,5 @@
+.money-summary { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: .75rem; margin: 1rem 0; }
+.money-summary div { display: grid; gap: .25rem; padding: .8rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .7rem; }
+.money-summary span { color: #64748b; font-size: .76rem; text-transform: uppercase; letter-spacing: .04em; }
+.money-summary strong { font-size: 1.05rem; }
+@media (max-width: 600px) { .money-summary { grid-template-columns: 1fr; } }

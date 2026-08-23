@@ -6,7 +6,7 @@ Last reviewed: 2026-08-09
 
 ## Outcome
 
-The first Scheduling increment supports every concrete bookable resource category—practitioner, room, bed/chair, imaging modality, equipment, team or service point. It implements planned availability, short-lived idempotent holds and authoritative resource reservations. It does not yet create a confirmed appointment/admission.
+The first Scheduling increment supports every concrete bookable resource category—practitioner, room, bed/chair, imaging modality, equipment, team or service point. It implements planned availability, short-lived idempotent holds and authoritative resource reservations. Confirmed generalized Booking is now implemented by the subsequent [DOC-040](40-generalized-booking-and-preference-notification-reference-slice.md); admission remains a separate future lifecycle.
 
 ## Model and behavior
 
@@ -38,4 +38,4 @@ The current `NumericKeyBaseline` creates Scheduling with `bigint` entity keys an
 
 ## Next slice and gates
 
-Implement confirmed Booking/Appointment and conversion of a valid hold in one transaction; enforce the complete service-resource requirement set; add reschedule/cancel/waitlist state machines; generate slots efficiently; add Worker expiry cleanup; add true multi-connection race and pooled-capacity stress tests; then integrate Queue. SignalR may announce committed status changes but never owns or executes reservations.
+DOC-040 converts a valid hold into a confirmed Booking and complete role-aware allocations; DOC-041 adds cancellation, reschedule and waitlist promotion. Next generate slots efficiently, add automatic waitlist offer/expiry, Worker hold cleanup and true multi-connection race/pool stress tests, then integrate the first imaging Queue. SignalR may announce committed status changes but never owns or executes reservations.

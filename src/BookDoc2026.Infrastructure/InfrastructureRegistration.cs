@@ -95,6 +95,17 @@ public static class InfrastructureRegistration
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.MapInboundClaims = false;
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var token = context.Request.Query["access_token"];
+                        if (!string.IsNullOrWhiteSpace(token)
+                            && context.HttpContext.Request.Path.StartsWithSegments("/hubs/queue"))
+                            context.Token = token;
+                        return Task.CompletedTask;
+                    }
+                };
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -132,6 +143,11 @@ public static class InfrastructureRegistration
         services.AddScoped<IStakeholderRepository, StakeholderRepository>();
         services.AddScoped<ICatalogRepository, CatalogRepository>();
         services.AddScoped<ISchedulingRepository, SchedulingRepository>();
+        services.AddScoped<IQueueRepository, QueueRepository>();
+        services.AddScoped<IContractRepository, ContractRepository>();
+        services.AddScoped<IEncounterRepository, EncounterRepository>();
+        services.AddScoped<IPractitionerRepository, PractitionerRepository>();
+        services.AddScoped<IBillingRepository, BillingRepository>();
         services.AddScoped<ICommunicationRepository, CommunicationRepository>();
         services.AddScoped<IOutboxProcessor, OutboxProcessor>();
         services.AddScoped<ITemplateCatalog, EfTemplateCatalog>();
@@ -139,6 +155,11 @@ public static class InfrastructureRegistration
         services.AddScoped<IIdentityAdministrationService, IdentityAdministrationService>();
         services.AddScoped<IOutboxMessageHandler, TenantApprovedMessageHandler>();
         services.AddScoped<IOutboxMessageHandler, ProviderCallbackReceivedHandler>();
+        services.AddScoped<IOutboxMessageHandler, BookingConfirmedMessageHandler>();
+        services.AddScoped<BookingLifecycleMessageDispatcher>();
+        services.AddScoped<IOutboxMessageHandler, BookingCancelledMessageHandler>();
+        services.AddScoped<IOutboxMessageHandler, BookingRescheduledMessageHandler>();
+        services.AddScoped<IOutboxMessageHandler, WaitlistPromotedMessageHandler>();
         return services;
     }
 }

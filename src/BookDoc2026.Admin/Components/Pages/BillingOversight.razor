@@ -1,0 +1,97 @@
+@page "/billing/oversight"
+@using BookDoc2026.Contracts.Billing
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject AdminSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Billing oversight | BOOKDOC2026 Admin</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to access billing oversight.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanAccess)
+{
+    <section class="panel"><h1>Access not granted</h1><p>Invoice or payment view permission is required.</p></section>
+}
+else
+{
+    <div class="page-heading"><div><p class="eyebrow">Administration / Finance</p><h1>Billing oversight</h1><p>Review recent branch-scoped posted finance. This screen cannot change, refund or delete financial records.</p></div><ScopeBadge Label="Read only" /></div>
+
+    <section class="panel branch-selector">
+        <label>Protected branch ID</label>
+        <div class="inline-form"><input @bind="branchId" /><label class="compact">Rows<select @bind="take"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></label><button class="primary" @onclick="LoadAsync" disabled="@busy">Load oversight</button></div>
+        @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice @(isError ? "error-notice" : null)">@message</p> }
+    </section>
+
+    @if (CanViewInvoices)
+    {
+        <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">Posted invoices</p><h2>Recent invoice register</h2></div><span class="muted">@invoices.Count records · @Money(invoices.Sum(item => item.Balance)) outstanding</span></div>
+            @if (invoices.Count == 0) { <p class="empty">No invoices loaded for this branch.</p> }
+            else
+            {
+                <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Issued</th><th>Patient ID</th><th>Total</th><th>Allocated</th><th>Balance</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+                @foreach (var invoice in invoices)
+                {
+                    <tr><td><strong>@invoice.InvoiceNumber</strong></td><td>@invoice.IssuedUtc.ToLocalTime().ToString("g")</td><td><code>@invoice.PatientId</code></td><td>@Money(invoice.Total, invoice.Currency)</td><td>@Money(invoice.AllocatedAmount, invoice.Currency)</td><td>@Money(invoice.Balance, invoice.Currency)</td><td><BillingStatusBadge Status="@invoice.Status" /></td><td title="@invoice.Snapshot.PayloadHash">@ShortHash(invoice.Snapshot.PayloadHash)</td></tr>
+                }
+                </tbody></table></div>
+            }
+        </section>
+    }
+
+    @if (CanViewPayments)
+    {
+        <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">Confirmed receipts</p><h2>Recent payment register</h2></div><span class="muted">@payments.Count records · @Money(payments.Sum(item => item.UnallocatedAmount)) unallocated</span></div>
+            @if (payments.Count == 0) { <p class="empty">No payments loaded for this branch.</p> }
+            else
+            {
+                <div class="table-wrap"><table><thead><tr><th>Receipt</th><th>Confirmed</th><th>Patient ID</th><th>Amount</th><th>Allocated</th><th>Remainder</th><th>Status</th><th>Tenders</th><th>Evidence</th></tr></thead><tbody>
+                @foreach (var payment in payments)
+                {
+                    <tr><td><strong>@payment.ReceiptNumber</strong></td><td>@payment.ConfirmedUtc.ToLocalTime().ToString("g")</td><td><code>@payment.PatientId</code></td><td>@Money(payment.Amount, payment.Currency)</td><td>@Money(payment.AllocatedAmount, payment.Currency)</td><td>@Money(payment.UnallocatedAmount, payment.Currency)</td><td><BillingStatusBadge Status="@payment.Status" /></td><td>@string.Join(" + ", payment.Tenders.Select(item => item.Method))</td><td title="@payment.ReceiptSnapshot.PayloadHash">@ShortHash(payment.ReceiptSnapshot.PayloadHash)</td></tr>
+                }
+                </tbody></table></div>
+            }
+        </section>
+    }
+}
+
+@code {
+    private string branchId = string.Empty;
+    private int take = 50;
+    private bool busy, isError;
+    private string? message;
+    private List<InvoiceResponse> invoices = [];
+    private List<PaymentResponse> payments = [];
+    private bool CanViewInvoices => Session.HasPermission(FoundationPermissions.BillingInvoicesView);
+    private bool CanViewPayments => Session.HasPermission(FoundationPermissions.BillingPaymentsView);
+    private bool CanAccess => AdminPermissionPolicy.CanAccessBillingOversight(Session.Permissions);
+
+    protected override void OnInitialized() => branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+
+    private Task LoadAsync() => RunAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) throw new InvalidOperationException("A protected branch ID is required.");
+        invoices = CanViewInvoices ? (await Api.ListInvoicesAsync(branchId, take)).ToList() : [];
+        payments = CanViewPayments ? (await Api.ListPaymentsAsync(branchId, take)).ToList() : [];
+        message = $"Loaded {invoices.Count} invoices and {payments.Count} payments.";
+    });
+
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true; message = null; isError = false;
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (AdminSessionRequiredException exception) { message = exception.Message; isError = true; Navigation.NavigateTo("/login"); }
+        catch (AdminSessionExpiredException exception) { message = exception.Message; isError = true; Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { message = exception.Error.SafeMessage; isError = true; }
+        catch (Exception exception) { message = exception.Message; isError = true; }
+        finally { busy = false; }
+    }
+
+    private static string Money(decimal value, string currency = "INR") => $"{currency} {value:N2}";
+    private static string ShortHash(string hash) => hash.Length <= 10 ? hash : $"{hash[..10]}…";
+}

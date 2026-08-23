@@ -41,5 +41,7 @@ th { color: #5a6a7f; font-size: .75rem; letter-spacing: .04em; text-transform: u
 .login-form { display: grid; gap: 16px; margin-top: 24px; }
 .scope-fields { grid-template-columns: 1fr; margin-bottom: 0; }
 .error-notice { color: #812d2d; background: #fff0f0; }
+.compact { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+code { font-size: .75rem; overflow-wrap: anywhere; }
 @media (max-width: 850px) { .form-grid { grid-template-columns: 1fr 1fr; } .page-heading { align-items: flex-start; flex-direction: column; } }
 @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .inline-form { align-items: stretch; flex-direction: column; } .wide { grid-column: auto; } }

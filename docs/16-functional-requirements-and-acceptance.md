@@ -40,6 +40,8 @@ Owner, priority, release and decision dependencies:
 - `FR-ENC-001`: signed clinical records cannot be overwritten or deleted; corrections create traceable amendments.
 - `FR-RX-001`: issued prescriptions retain the exact issued representation and practitioner identity.
 - `FR-BIL-001`: issued invoices preserve numbering, price and tax snapshots and support reasoned reversal, not mutation.
+- `FR-BIL-002`: confirmed payments preserve split tender and immutable receipt evidence; append-only allocation cannot exceed either the Payment remainder or same-patient/currency Invoice balance. DOC-049 implements the non-refund foundation; tax/reversal acceptance remains open.
+- `FR-BIL-003`: an authorized branch Cashier can search a masked Patient, compose service lines, issue an idempotent Invoice, receive split tender, allocate safely and browser-print receipt evidence; Admin separately exposes only the invoice/payment registers allowed by its read permissions. DOC-050 implements the reference journey; finance UAT and final policy remain open.
 - `FR-COM-001`: communication checks template version, consent/preference, channel policy and idempotency before delivery.
 - `FR-REP-001`: report access requires allowed host, report permission and tenant/branch/data scope.
 - `FR-REP-002`: only Admin-authorized users schedule reports; execution re-evaluates scope and recipient eligibility.

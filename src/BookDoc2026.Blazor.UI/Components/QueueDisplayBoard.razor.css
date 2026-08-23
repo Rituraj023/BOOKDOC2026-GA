@@ -1,0 +1,4 @@
+.display-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; }
+.display-board article { display: grid; gap: .6rem; padding: 1rem; background: #0f172a; border-radius: .8rem; color: white; }
+.display-board article > strong { font-size: 1.45rem; letter-spacing: .05em; }
+.display-board article > span { color: #cbd5e1; font-size: .8rem; }

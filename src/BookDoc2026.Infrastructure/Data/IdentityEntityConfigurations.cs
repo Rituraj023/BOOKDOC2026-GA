@@ -93,9 +93,45 @@ internal sealed class ApplicationIdentitySupportConfiguration :
     {
         builder.ToTable("role_claim", "identity");
         var all = AllPermissions();
+        var contractPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.ContractsView,
+            FoundationPermissions.ContractsManage,
+            FoundationPermissions.ContractEntitlementsReserve,
+            FoundationPermissions.ContractEntitlementsConsume,
+            FoundationPermissions.ContractEntitlementsRelease
+        };
+        var encounterPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.EncountersView,
+            FoundationPermissions.EncounterDraftsManage,
+            FoundationPermissions.EncountersSign,
+            FoundationPermissions.EncountersAmend
+        };
+        var practitionerPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.PractitionersView,
+            FoundationPermissions.PractitionersManage,
+            FoundationPermissions.PractitionerCredentialsVerify,
+            FoundationPermissions.PractitionerAssignmentsManage
+        };
+        var billingPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.BillingInvoicesView,
+            FoundationPermissions.BillingInvoicesIssue,
+            FoundationPermissions.BillingPaymentsView,
+            FoundationPermissions.BillingPaymentsReceive,
+            FoundationPermissions.BillingPaymentsAllocate
+        };
+        var appendedPermissions = new HashSet<string>(contractPermissions, StringComparer.Ordinal);
+        appendedPermissions.UnionWith(encounterPermissions);
+        appendedPermissions.UnionWith(practitionerPermissions);
+        appendedPermissions.UnionWith(billingPermissions);
         var claims = new List<ApplicationRoleClaim>();
         var id = 1;
-        foreach (var permission in all)
+        // Preserve identifiers already shipped by earlier migrations. Contract and Encounter groups are
+        // appended in release order; future groups must follow the same append-only pattern.
+        foreach (var permission in all.Where(permission => !appendedPermissions.Contains(permission)))
         {
             claims.Add(new ApplicationRoleClaim
             {
@@ -106,7 +142,8 @@ internal sealed class ApplicationIdentitySupportConfiguration :
             });
         }
 
-        foreach (var permission in FoundationPermissions.BranchAssignable.Order(StringComparer.Ordinal))
+        foreach (var permission in FoundationPermissions.BranchAssignable
+                     .Where(permission => !appendedPermissions.Contains(permission)).Order(StringComparer.Ordinal))
         {
             claims.Add(new ApplicationRoleClaim
             {
@@ -114,6 +151,74 @@ internal sealed class ApplicationIdentitySupportConfiguration :
                 RoleId = 2,
                 ClaimType = BookDocClaimTypes.Permission,
                 ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in contractPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in contractPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in encounterPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in encounterPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in practitionerPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in practitionerPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in billingPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in billingPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
             });
         }
 

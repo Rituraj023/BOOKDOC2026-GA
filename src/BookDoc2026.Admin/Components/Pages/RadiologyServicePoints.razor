@@ -1,0 +1,102 @@
+@page "/radiology/service-points"
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject AdminSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Radiology setup | BOOKDOC2026 Admin</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to configure radiology.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanManage)
+{
+    <section class="panel"><h1>Access not granted</h1><p>Your role cannot manage queue service points.</p></section>
+}
+else
+{
+    <div class="page-heading">
+        <div><p class="eyebrow">Administration / Radiology</p><h1>Imaging service points</h1><p>Define branch-owned X-ray and CT queue destinations. Protected identifiers remain opaque in the UI.</p></div>
+        <ScopeBadge Label="Admin managed" />
+    </div>
+
+    <section class="panel branch-selector">
+        <label for="branch-id">Protected branch ID</label>
+        <div class="inline-form"><input id="branch-id" @bind="branchId" /><button class="primary" @onclick="LoadAsync" disabled="@busy">Load service points</button></div>
+        @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice">@message</p> }
+    </section>
+
+    <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow">Branch configuration</p><h2>Add imaging destination</h2></div><span class="muted">X-ray and CT in this slice</span></div>
+        <div class="form-grid">
+            <label>Code<input @bind="code" placeholder="XRAY-01" /></label>
+            <label>Name<input @bind="name" placeholder="Ground-floor X-ray" /></label>
+            <label>Modality<select @bind="modality"><option>XRay</option><option>CT</option></select></label>
+            <label>Protected resource ID (optional)<input @bind="resourceId" /></label>
+        </div>
+        <button class="primary" @onclick="CreateAsync" disabled="@busy">Create service point</button>
+    </section>
+
+    <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow">Current branch</p><h2>Service-point catalog</h2></div><span class="muted">@servicePoints.Count configured</span></div>
+        @if (servicePoints.Count == 0) { <p class="empty">Load a branch or create its first imaging service point.</p> }
+        else
+        {
+            <div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Modality</th><th>Resource</th><th>Status</th><th>Version</th></tr></thead>
+                <tbody>@foreach (var point in servicePoints) { <tr><td>@point.Code</td><td>@point.Name</td><td>@point.Modality</td><td>@(point.ResourceId ?? "—")</td><td>@(point.IsActive ? "Active" : "Inactive")</td><td>@point.Version</td></tr> }</tbody>
+            </table></div>
+        }
+    </section>
+}
+
+@code {
+    private string branchId = string.Empty;
+    private string code = string.Empty;
+    private string name = string.Empty;
+    private string modality = "XRay";
+    private string? resourceId;
+    private string? message;
+    private bool busy;
+    private List<ImagingServicePointResponse> servicePoints = [];
+    private bool CanManage => AdminPermissionPolicy.CanManageQueueServicePoints(Session.Permissions);
+
+    protected override void OnInitialized() => branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+
+    private Task LoadAsync() => RunAsync(async () =>
+    {
+        RequireBranch();
+        servicePoints = (await Api.ListImagingServicePointsAsync(branchId)).ToList();
+        message = $"Loaded {servicePoints.Count} imaging service points.";
+    });
+
+    private Task CreateAsync() => RunAsync(async () =>
+    {
+        RequireBranch();
+        var created = await Api.CreateImagingServicePointAsync(branchId,
+            new(code, name, modality, EmptyToNull(resourceId)));
+        servicePoints = (await Api.ListImagingServicePointsAsync(branchId)).ToList();
+        code = string.Empty;
+        name = string.Empty;
+        resourceId = null;
+        message = $"Created {created.Code} for {created.Modality}.";
+    });
+
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true; message = null;
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (AdminSessionRequiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
+        catch (AdminSessionExpiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { message = exception.Error.SafeMessage; }
+        catch (Exception exception) { message = exception.Message; }
+        finally { busy = false; }
+    }
+
+    private void RequireBranch()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) throw new InvalidOperationException("A protected branch ID is required.");
+    }
+
+    private static string? EmptyToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

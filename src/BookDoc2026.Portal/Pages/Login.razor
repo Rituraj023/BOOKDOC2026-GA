@@ -1,0 +1,27 @@
+@page "/login"
+@inject PortalSessionState Session
+@inject AuthApiClient Auth
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in | BOOKDOC2026 Portal</PageTitle>
+<div class="login-shell"><section class="panel login-panel"><p class="eyebrow">Authenticated operations</p><h1>Sign in</h1><p>Portal tokens stay in browser memory and are cleared on refresh or sign-out; they are not written to browser storage.</p>
+@if (Session.IsAuthenticated) { <p class="notice">Signed in as @Session.Session!.DisplayName.</p><button class="primary" @onclick="Continue">Continue</button> }
+else { <div class="login-form"><label>Email<input type="email" autocomplete="username" @bind="email" @bind:event="oninput" /></label><label>Password<input type="password" autocomplete="current-password" @bind="password" @bind:event="oninput" /></label><details><summary>Select a non-default clinic scope</summary><div class="form-grid"><label>Tenant ID<input @bind="tenantId" @bind:event="oninput" /></label><label>Organization ID<input @bind="organizationId" @bind:event="oninput" /></label><label>Branch ID<input @bind="branchId" @bind:event="oninput" /></label></div></details><button class="primary" @onclick="SignInAsync" disabled="@busy">@(busy ? "Signing in…" : "Sign in")</button></div> }
+@if (!string.IsNullOrWhiteSpace(message)) { <p class="notice error-notice">@message</p> }
+</section></div>
+
+@code {
+    private string email = string.Empty, password = string.Empty;
+    private string? tenantId, organizationId, branchId, message;
+    private bool busy;
+    private async Task SignInAsync()
+    {
+        busy = true; message = null;
+        try { await Session.SignInAsync(Auth, new(email, password, Clean(tenantId), Clean(organizationId), Clean(branchId))); password = string.Empty; Navigation.NavigateTo("/"); }
+        catch (RemoteErrorException exception) { password = string.Empty; message = exception.Error.SafeMessage; }
+        catch { password = string.Empty; message = "Sign-in could not be completed. Try again or contact support."; }
+        finally { busy = false; }
+    }
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private void Continue() => Navigation.NavigateTo("/");
+}

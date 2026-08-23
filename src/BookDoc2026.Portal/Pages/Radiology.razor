@@ -1,0 +1,139 @@
+@page "/radiology"
+@implements IAsyncDisposable
+@using BookDoc2026.Blazor.UI.Queues
+@using Microsoft.AspNetCore.SignalR.Client
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject PortalSessionState Session
+@inject NavigationManager Navigation
+@inject Microsoft.Extensions.Options.IOptions<BookDocClientOptions> ClientOptions
+
+<PageTitle>Radiology | BOOKDOC2026 Portal</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to open the radiology worklist.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanView)
+{
+    <section class="panel"><h1>Access not granted</h1><p>Your role cannot view radiology queues.</p></section>
+}
+else
+{
+    <div class="page-heading"><div><p class="eyebrow">Operations / Radiology</p><h1>Technician worklist</h1><p>The API remains authoritative; live events trigger a scoped refresh.</p></div><ScopeBadge Label="Branch scoped" /></div>
+    <section class="panel selector-panel">
+        <label>Imaging service point<select value="@selectedServicePointId" @onchange="SelectServicePointAsync" disabled="@busy"><option value="">Select a service point</option>@foreach (var point in servicePoints) { <option value="@point.Id">@point.Code · @point.Name (@point.Modality)</option> }</select></label>
+        <button @onclick="LoadSelectedAsync" disabled="@(busy || string.IsNullOrWhiteSpace(selectedServicePointId))">Refresh</button>
+        <span class="connection @connectionClass">@connectionMessage</span>
+    </section>
+    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice error-notice">@message</p> }
+    @if (selectedServicePoint is not null)
+    {
+        <section class="panel"><div class="section-heading"><div><p class="eyebrow">@selectedServicePoint.Modality / @selectedServicePoint.Code</p><h2>@selectedServicePoint.Name</h2></div><span class="muted">@projection.Tickets.Count tickets</span></div>
+            <RadiologyWorklist Tickets="projection.Tickets" CanCall="CanCall" CanProgress="CanProgress" CanCancel="CanCancel" BusyTicketId="busyTicketId" Transition="TransitionAsync" />
+        </section>
+        @if (CanViewDisplay)
+        {
+            <section class="panel"><div class="section-heading"><div><p class="eyebrow">Safe display</p><h2>Now calling</h2></div><span class="muted">Display tokens only</span></div><QueueDisplayBoard Tickets="projection.DisplayTickets" /></section>
+        }
+    }
+}
+
+@code {
+    private readonly RadiologyQueueProjection projection = new();
+    private readonly SemaphoreSlim loadGate = new(1, 1);
+    private List<ImagingServicePointResponse> servicePoints = [];
+    private HubConnection? hub;
+    private string branchId = string.Empty, selectedServicePointId = string.Empty;
+    private string? busyTicketId, message;
+    private string connectionMessage = "Live updates not connected", connectionClass = "offline";
+    private bool busy;
+    private bool CanView => Session.HasPermission(FoundationPermissions.QueuesView);
+    private bool CanViewDisplay => Session.HasPermission(FoundationPermissions.QueuesDisplayView);
+    private bool CanCall => Session.HasPermission(FoundationPermissions.QueuesCall);
+    private bool CanProgress => Session.HasPermission(FoundationPermissions.QueuesProgress);
+    private bool CanCancel => Session.HasPermission(FoundationPermissions.QueuesCancel);
+    private ImagingServicePointResponse? selectedServicePoint => servicePoints.SingleOrDefault(point => point.Id == selectedServicePointId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated || !CanView) return;
+        branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(branchId)) { message = "Select a branch scope when signing in."; return; }
+        await RunAsync(async () =>
+        {
+            servicePoints = (await Api.ListImagingServicePointsAsync(branchId)).Where(point => point.IsActive).ToList();
+            selectedServicePointId = servicePoints.FirstOrDefault()?.Id ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(selectedServicePointId)) await LoadProjectionAsync();
+            await ConnectRealtimeAsync();
+        });
+    }
+
+    private async Task SelectServicePointAsync(ChangeEventArgs args)
+    { selectedServicePointId = args.Value?.ToString() ?? string.Empty; await LoadSelectedAsync(); }
+
+    private Task LoadSelectedAsync() => RunAsync(LoadProjectionAsync);
+
+    private async Task LoadProjectionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(selectedServicePointId)) { projection.Replace([], []); return; }
+        await loadGate.WaitAsync();
+        try
+        {
+            await Session.EnsureFreshAsync(Auth);
+            var tickets = await Api.ListQueueTicketsAsync(branchId, selectedServicePointId);
+            var display = CanViewDisplay ? await Api.GetQueueDisplayAsync(branchId, selectedServicePointId) : [];
+            projection.Replace(tickets, display);
+            await InvokeAsync(StateHasChanged);
+        }
+        finally { loadGate.Release(); }
+    }
+
+    private async Task TransitionAsync((QueueTicketResponse Ticket, string Action) transition)
+    {
+        busyTicketId = transition.Ticket.Id; message = null;
+        try
+        {
+            await Session.EnsureFreshAsync(Auth);
+            await Api.TransitionQueueTicketAsync(branchId, transition.Ticket.Id, transition.Action, new(transition.Ticket.Version));
+            await LoadProjectionAsync();
+        }
+        catch (RemoteErrorException exception) { message = exception.Error.SafeMessage; await LoadProjectionAsync(); }
+        catch (Exception exception) { message = exception.Message; }
+        finally { busyTicketId = null; }
+    }
+
+    private async Task ConnectRealtimeAsync()
+    {
+        if (hub is not null) return;
+        var hubUrl = new Uri(new Uri(ClientOptions.Value.BaseUrl.TrimEnd('/') + "/"), "hubs/queue");
+        hub = new HubConnectionBuilder().WithUrl(hubUrl, options => options.AccessTokenProvider = async () =>
+        { await Session.EnsureFreshAsync(Auth); return await Session.GetAccessTokenAsync(); }).WithAutomaticReconnect().Build();
+        hub.On<QueueRealtimeEvent>("QueueChanged", async change =>
+        {
+            if (projection.RequiresRefresh(change, selectedServicePointId)) await InvokeAsync(LoadProjectionAsync);
+        });
+        hub.Reconnecting += _ => { connectionMessage = "Reconnecting live updates…"; connectionClass = "reconnecting"; return InvokeAsync(StateHasChanged); };
+        hub.Reconnected += async _ => { connectionMessage = "Live updates connected"; connectionClass = "online"; await InvokeAsync(LoadProjectionAsync); };
+        hub.Closed += _ => { connectionMessage = "Live updates offline — use Refresh"; connectionClass = "offline"; return InvokeAsync(StateHasChanged); };
+        try { await hub.StartAsync(); connectionMessage = "Live updates connected"; connectionClass = "online"; }
+        catch { connectionMessage = "Live updates offline — use Refresh"; connectionClass = "offline"; }
+    }
+
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true; message = null;
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (PortalSessionRequiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { message = exception.Error.SafeMessage; }
+        catch (Exception exception) { message = exception.Message; }
+        finally { busy = false; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) await hub.DisposeAsync();
+        loadGate.Dispose();
+    }
+}

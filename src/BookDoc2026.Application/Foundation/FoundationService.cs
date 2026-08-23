@@ -1,5 +1,6 @@
 using System.Text.Json;
 using BookDoc2026.Application.Abstractions;
+using BookDoc2026.Application.Scheduling;
 using BookDoc2026.Contracts.Foundation;
 using BookDoc2026.Contracts.Security;
 using BookDoc2026.Domain.Common;
@@ -95,6 +96,37 @@ public sealed class FoundationService(
             "Your clinic account is approved",
             now);
         approvalTemplate.Publish(approvalTemplate.Revision, now);
+        var bookingTemplate = MessageTemplate.CreateDraft(
+            tenant.Id,
+            null,
+            null,
+            BookingConfirmedOutboxPayload.TemplateKey,
+            1,
+            CommunicationChannel.Email,
+            "en-IN",
+            MessageTemplateContentKind.Html,
+            "<p>Hello {{PatientName}}, booking {{BookingNumber}} for {{ServiceName}} is confirmed for {{StartTime}} at {{ClinicName}}.</p>",
+            "Booking {{BookingNumber}} confirmed",
+            now);
+        bookingTemplate.Publish(bookingTemplate.Revision, now);
+        var bookingCancelledTemplate = MessageTemplate.CreateDraft(
+            tenant.Id, null, null, BookingLifecycleOutboxPayload.CancelledTemplateKey, 1,
+            CommunicationChannel.Email, "en-IN", MessageTemplateContentKind.Html,
+            "<p>Hello {{PatientName}}, booking {{BookingNumber}} for {{ServiceName}} at {{ClinicName}} was cancelled. Reason: {{Reason}}.</p>",
+            "Booking {{BookingNumber}} cancelled", now);
+        bookingCancelledTemplate.Publish(bookingCancelledTemplate.Revision, now);
+        var bookingRescheduledTemplate = MessageTemplate.CreateDraft(
+            tenant.Id, null, null, BookingLifecycleOutboxPayload.RescheduledTemplateKey, 1,
+            CommunicationChannel.Email, "en-IN", MessageTemplateContentKind.Html,
+            "<p>Hello {{PatientName}}, booking {{PreviousBookingNumber}} was moved from {{PreviousStartTime}} to {{StartTime}}. New booking: {{BookingNumber}} for {{ServiceName}} at {{ClinicName}}. Reason: {{Reason}}.</p>",
+            "Booking rescheduled to {{StartTime}}", now);
+        bookingRescheduledTemplate.Publish(bookingRescheduledTemplate.Revision, now);
+        var waitlistPromotedTemplate = MessageTemplate.CreateDraft(
+            tenant.Id, null, null, BookingLifecycleOutboxPayload.WaitlistPromotedTemplateKey, 1,
+            CommunicationChannel.Email, "en-IN", MessageTemplateContentKind.Html,
+            "<p>Hello {{PatientName}}, your waitlist request is confirmed as booking {{BookingNumber}} for {{ServiceName}} on {{StartTime}} at {{ClinicName}}.</p>",
+            "Waitlist booking {{BookingNumber}} confirmed", now);
+        waitlistPromotedTemplate.Publish(waitlistPromotedTemplate.Revision, now);
         var outbox = OutboxMessage.Enqueue(
             tenant.Id,
             branch.Id,
@@ -109,6 +141,10 @@ public sealed class FoundationService(
         await repository.AddBranchAsync(branch, cancellationToken);
         await repository.AddBranchConfigurationAsync(configuration, cancellationToken);
         await repository.AddMessageTemplateAsync(approvalTemplate, cancellationToken);
+        await repository.AddMessageTemplateAsync(bookingTemplate, cancellationToken);
+        await repository.AddMessageTemplateAsync(bookingCancelledTemplate, cancellationToken);
+        await repository.AddMessageTemplateAsync(bookingRescheduledTemplate, cancellationToken);
+        await repository.AddMessageTemplateAsync(waitlistPromotedTemplate, cancellationToken);
         await repository.AddOutboxMessageAsync(outbox, cancellationToken);
         await repository.AddAuditEventAsync(AuditEvent.Record(
             tenant.Id,

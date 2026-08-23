@@ -1,13 +1,18 @@
 using System.Text;
 using BookDoc2026.Application.Abstractions;
 using BookDoc2026.Domain.Catalog;
+using BookDoc2026.Domain.Billing;
 using BookDoc2026.Domain.Common;
 using BookDoc2026.Domain.Communications;
+using BookDoc2026.Domain.Contracts;
+using BookDoc2026.Domain.Clinical;
 using BookDoc2026.Domain.Foundation;
 using BookDoc2026.Domain.Identity;
 using BookDoc2026.Domain.Patients;
+using BookDoc2026.Domain.Queues;
 using BookDoc2026.Domain.Scheduling;
 using BookDoc2026.Domain.Stakeholders;
+using BookDoc2026.Domain.Workforce;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -79,6 +84,26 @@ public sealed class BookDocDbContext(
     public DbSet<AvailabilityException> AvailabilityExceptions => Set<AvailabilityException>();
     public DbSet<SchedulingHold> SchedulingHolds => Set<SchedulingHold>();
     public DbSet<ResourceReservation> ResourceReservations => Set<ResourceReservation>();
+    public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<BookingResourceAllocation> BookingResourceAllocations => Set<BookingResourceAllocation>();
+    public DbSet<BookingWaitlistEntry> BookingWaitlistEntries => Set<BookingWaitlistEntry>();
+    public DbSet<ImagingServicePoint> ImagingServicePoints => Set<ImagingServicePoint>();
+    public DbSet<QueueTicket> QueueTickets => Set<QueueTicket>();
+    public DbSet<QueueTicketEvent> QueueTicketEvents => Set<QueueTicketEvent>();
+    public DbSet<ContractAgreement> Contracts => Set<ContractAgreement>();
+    public DbSet<ContractEntitlement> ContractEntitlements => Set<ContractEntitlement>();
+    public DbSet<EntitlementReservation> EntitlementReservations => Set<EntitlementReservation>();
+    public DbSet<ClinicalEncounter> ClinicalEncounters => Set<ClinicalEncounter>();
+    public DbSet<EncounterRevision> EncounterRevisions => Set<EncounterRevision>();
+    public DbSet<PractitionerProfile> PractitionerProfiles => Set<PractitionerProfile>();
+    public DbSet<PractitionerCredential> PractitionerCredentials => Set<PractitionerCredential>();
+    public DbSet<PractitionerAssignment> PractitionerAssignments => Set<PractitionerAssignment>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentTender> PaymentTenders => Set<PaymentTender>();
+    public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
+    public DbSet<FinancialDocumentSnapshot> FinancialDocumentSnapshots => Set<FinancialDocumentSnapshot>();
 
     public long? CurrentTenantId => currentActor.TenantId;
 
@@ -128,6 +153,46 @@ public sealed class BookDocDbContext(
         modelBuilder.Entity<SchedulingHold>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<ResourceReservation>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<Booking>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<BookingResourceAllocation>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<BookingWaitlistEntry>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<ImagingServicePoint>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<QueueTicket>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<QueueTicketEvent>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<ContractAgreement>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<ContractEntitlement>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<EntitlementReservation>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<ClinicalEncounter>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<EncounterRevision>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PractitionerProfile>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PractitionerCredential>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PractitionerAssignment>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<Invoice>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<InvoiceLine>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<Payment>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PaymentTender>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PaymentAllocation>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<FinancialDocumentSnapshot>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<MessageTemplate>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
@@ -189,6 +254,10 @@ public sealed class BookDocDbContext(
         ProtectMessageDeliveryAttempts();
         ProtectCommunicationPreferenceEvents();
         ProtectMessageDeliveryStatusEvents();
+        ProtectBookingResourceAllocations();
+        ProtectQueueTicketEvents();
+        ProtectEncounterRevisions();
+        ProtectPostedFinancialRecords();
         ProtectTenantScope();
         return base.SaveChangesAsync(cancellationToken);
     }
@@ -229,6 +298,39 @@ public sealed class BookDocDbContext(
         if (ChangeTracker.Entries<MessageDeliveryStatusEvent>()
             .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Message delivery status events are append-only.");
+    }
+
+    private void ProtectBookingResourceAllocations()
+    {
+        if (ChangeTracker.Entries<BookingResourceAllocation>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Booking resource allocations are immutable.");
+    }
+
+    private void ProtectQueueTicketEvents()
+    {
+        if (ChangeTracker.Entries<QueueTicketEvent>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Queue ticket events are append-only.");
+    }
+
+    private void ProtectEncounterRevisions()
+    {
+        if (ChangeTracker.Entries<EncounterRevision>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Clinical encounter revisions are append-only.");
+    }
+
+    private void ProtectPostedFinancialRecords()
+    {
+        if (ChangeTracker.Entries<Invoice>().Any(entry => entry.State == EntityState.Deleted)
+            || ChangeTracker.Entries<Payment>().Any(entry => entry.State == EntityState.Deleted))
+            throw new InvalidOperationException("Posted invoices and payments cannot be deleted.");
+        if (ChangeTracker.Entries<InvoiceLine>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<PaymentTender>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<PaymentAllocation>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<FinancialDocumentSnapshot>().Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Posted financial details and snapshots are immutable.");
     }
 
     private void ProtectTenantScope()

@@ -8,6 +8,8 @@ Purpose: define specialty questions and artifacts before clinical implementation
 
 Both specialties use Patient, Appointment, Resource, Queue, Encounter, Diagnosis, Procedure, Prescription, Investigation, Document and Billing foundations. Specialty content extends a common encounter through versioned templates and coded observations; it must not create a separate patient or appointment model.
 
+The policy-neutral common Encounter revision/sign/amend boundary is now implemented in [DOC-047](47-encounter-revision-signing-foundation.md), and [DOC-048](48-practitioner-credential-and-assignment-foundation.md) now requires verified branch/service Practitioner eligibility for signing and signed amendment. This does not pass the specialty readiness gate below: Physiotherapy/Orthopaedics field sets, supervisory/countersigning rules, safety prompts, documents and acceptance cases remain unimplemented until clinical approval.
+
 Required shared capabilities:
 
 - body region, side/laterality, onset/mechanism, pain and functional history;

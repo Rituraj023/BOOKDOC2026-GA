@@ -1,0 +1,13 @@
+<div class="money-summary" aria-label="Billing totals">
+    <div><span>Total</span><strong>@Money(Total)</strong></div>
+    <div><span>Allocated</span><strong>@Money(Allocated)</strong></div>
+    <div><span>Balance</span><strong>@Money(Balance)</strong></div>
+</div>
+
+@code {
+    [Parameter] public string Currency { get; set; } = "INR";
+    [Parameter] public decimal Total { get; set; }
+    [Parameter] public decimal Allocated { get; set; }
+    [Parameter] public decimal Balance { get; set; }
+    private string Money(decimal value) => $"{Currency} {value:N2}";
+}

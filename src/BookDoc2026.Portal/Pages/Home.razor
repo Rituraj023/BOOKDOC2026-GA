@@ -3,3 +3,28 @@
 <h1>BOOKDOC2026 Portal</h1>
 <ScopeBadge Label="Authenticated global access" />
 <p>This internet-facing host composes operational and self-service workflows from the authenticated user's permissions and selected clinic scope. It never grants cross-tenant visibility.</p>
+@if (Session.IsAuthenticated)
+{
+    <p>Signed in as <strong>@Session.Session!.DisplayName</strong> for branch <code>@(Session.Session.Scope?.BranchId ?? "no branch selected")</code>.</p>
+    <PermissionDashboard Cards="Cards" Permissions="Session.Permissions" />
+}
+else
+{
+    <p><a class="primary-link" href="/login">Sign in to Portal</a></p>
+}
+
+@code {
+    [Inject] private PortalSessionState Session { get; set; } = default!;
+    private static readonly DashboardCardDescriptor[] Cards =
+    [
+        new("cashier", "Cashier", "Issue invoices, receive split tender, allocate payments and print immutable receipts.", "/billing/cashier",
+            [FoundationPermissions.PatientsSearch, FoundationPermissions.CatalogView,
+                FoundationPermissions.BillingInvoicesView, FoundationPermissions.BillingInvoicesIssue,
+                FoundationPermissions.BillingPaymentsView, FoundationPermissions.BillingPaymentsReceive,
+                FoundationPermissions.BillingPaymentsAllocate], Badge: "Finance"),
+        new("radiology-reception", "Radiology reception", "Find a patient and issue an idempotent X-ray or CT queue token.", "/radiology/check-in",
+            [FoundationPermissions.PatientsSearch, FoundationPermissions.QueuesCheckIn], Badge: "Reception"),
+        new("radiology-worklist", "Radiology technician", "Call and progress the authorized imaging worklist.", "/radiology",
+            [FoundationPermissions.QueuesView], Badge: "Operations")
+    ];
+}

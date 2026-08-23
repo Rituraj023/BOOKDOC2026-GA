@@ -22,6 +22,500 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.FinancialDocumentSnapshot", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("document_number");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .HasColumnName("payload_hash")
+                        .IsFixedLength();
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("payload_json");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("schema_version");
+
+                    b.Property<long>("SourceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("source_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BranchId", "DocumentNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Kind", "SourceId")
+                        .IsUnique();
+
+                    b.ToTable("financial_document_snapshot", "billing", t =>
+                        {
+                            t.HasCheckConstraint("ck_billing_document_kind", "[kind] BETWEEN 1 AND 2");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.Invoice", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AllocatedAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("allocated_amount");
+
+                    b.Property<long?>("BookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booking_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("CalculationPolicyVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("calculation_policy_version");
+
+                    b.Property<long?>("ContractId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("contract_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<decimal>("DiscountTotal")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("discount_total");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<long>("IssuedByActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("issued_by_actor_id");
+
+                    b.Property<DateTimeOffset>("IssuedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("issued_utc");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .HasColumnName("request_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("request_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("subtotal");
+
+                    b.Property<decimal>("TaxTotal")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("tax_total");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("total");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BookingId");
+
+                    b.HasIndex("TenantId", "ContractId");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "InvoiceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "PatientId", "Status", "IssuedUtc");
+
+                    b.ToTable("invoice", "billing", t =>
+                        {
+                            t.HasCheckConstraint("ck_billing_invoice_amounts", "[subtotal] > 0 AND [discount_total] >= 0 AND [tax_total] >= 0 AND [total] > 0 AND [allocated_amount] >= 0 AND [allocated_amount] <= [total]");
+
+                            t.HasCheckConstraint("ck_billing_invoice_status", "[status] BETWEEN 1 AND 3");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.InvoiceLine", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("DescriptionSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasColumnName("description_snapshot");
+
+                    b.Property<long>("InvoiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("line_total");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("ServiceCodeSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("service_code_snapshot");
+
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("unit_price");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "InvoiceId");
+
+                    b.HasIndex("TenantId", "ServiceId");
+
+                    b.ToTable("invoice_line", "billing", t =>
+                        {
+                            t.HasCheckConstraint("ck_billing_invoice_line", "[quantity] BETWEEN 1 AND 1000 AND [unit_price] >= 0 AND [line_total] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.Payment", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("AllocatedAmount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("allocated_amount");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("ConfirmedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("confirmed_utc");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("ReceiptNumber")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasColumnName("receipt_number");
+
+                    b.Property<long>("ReceivedByActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("received_by_actor_id");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .HasColumnName("request_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("request_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "ReceiptNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "PatientId", "ConfirmedUtc");
+
+                    b.ToTable("payment", "billing", t =>
+                        {
+                            t.HasCheckConstraint("ck_billing_payment_amounts", "[amount] > 0 AND [allocated_amount] >= 0 AND [allocated_amount] <= [amount]");
+
+                            t.HasCheckConstraint("ck_billing_payment_status", "[status] BETWEEN 1 AND 2");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.PaymentAllocation", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AllocatedByActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("allocated_by_actor_id");
+
+                    b.Property<DateTimeOffset>("AllocatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("allocated_utc");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<long>("InvoiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PaymentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("payment_id");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .HasColumnName("request_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("request_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "InvoiceId");
+
+                    b.HasIndex("TenantId", "BranchId", "PaymentId");
+
+                    b.HasIndex("TenantId", "PaymentId", "InvoiceId");
+
+                    b.ToTable("payment_allocation", "billing", t =>
+                        {
+                            t.HasCheckConstraint("ck_billing_payment_allocation_amount", "[amount] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.PaymentTender", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("ExternalReference")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasColumnName("external_reference");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int")
+                        .HasColumnName("method");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("Narration")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("narration");
+
+                    b.Property<long>("PaymentId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("payment_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PaymentId");
+
+                    b.ToTable("payment_tender", "billing", t =>
+                        {
+                            t.HasCheckConstraint("ck_billing_payment_tender_amount", "[amount] > 0");
+
+                            t.HasCheckConstraint("ck_billing_payment_tender_method", "[method] BETWEEN 1 AND 6");
+                        });
+                });
+
             modelBuilder.Entity("BookDoc2026.Domain.Catalog.BookableResource", b =>
                 {
                     b.Property<long>("Id")
@@ -398,6 +892,220 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                     b.ToTable("service_resource_requirement", "catalog", t =>
                         {
                             t.HasCheckConstraint("ck_service_resource_requirement_quantity", "[quantity] BETWEEN 1 AND 1000");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Clinical.ClinicalEncounter", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booking_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("EncounterNumber")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)")
+                        .HasColumnName("encounter_number");
+
+                    b.Property<long>("LatestRevisionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("latest_revision_id");
+
+                    b.Property<int>("LatestRevisionNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("latest_revision_number");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_id");
+
+                    b.Property<long?>("SignedByActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("signed_by_actor_id");
+
+                    b.Property<DateTimeOffset?>("SignedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("signed_utc");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BookingId");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "ServiceId");
+
+                    b.HasIndex("TenantId", "BranchId", "BookingId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "PatientId", "Status");
+
+                    b.ToTable("encounter", "clinical", t =>
+                        {
+                            t.HasCheckConstraint("ck_clinical_encounter_status", "[status] BETWEEN 1 AND 2");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Clinical.EncounterRevision", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AmendmentReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("amendment_reason");
+
+                    b.Property<string>("Assessment")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("assessment");
+
+                    b.Property<long>("AuthorActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("author_actor_id");
+
+                    b.Property<string>("BodySite")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasColumnName("body_site");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("ChiefComplaint")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasColumnName("chief_complaint");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .HasColumnName("content_hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<long>("EncounterId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("encounter_id");
+
+                    b.Property<string>("Examination")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("examination");
+
+                    b.Property<string>("History")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("history");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("instructions");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LateralityCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("laterality_code");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long?>("ParentRevisionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("parent_revision_id");
+
+                    b.Property<string>("Plan")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("plan");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("revision_number");
+
+                    b.Property<DateTimeOffset?>("SignedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("signed_utc");
+
+                    b.Property<string>("SpecialtyCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("specialty_code");
+
+                    b.Property<string>("TemplateKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasColumnName("template_key");
+
+                    b.Property<string>("TemplateVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("template_version");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ParentRevisionId");
+
+                    b.HasIndex("TenantId", "EncounterId", "RevisionNumber")
+                        .IsUnique();
+
+                    b.ToTable("encounter_revision", "clinical", t =>
+                        {
+                            t.HasCheckConstraint("ck_encounter_revision_kind", "[kind] BETWEEN 1 AND 3");
                         });
                 });
 
@@ -829,6 +1537,281 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                     b.HasIndex("TenantId", "BranchId", "CreatedUtc");
 
                     b.ToTable("provider_callback_inbox", "communication");
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Contracts.ContractAgreement", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("ContractNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("contract_number");
+
+                    b.Property<string>("ContractTypeCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("contract_type_code");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<decimal>("PackagePrice")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("package_price");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("rule_version");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateOnly>("ValidTo")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_to");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "BranchId", "ContractNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "PatientId", "Status", "ValidTo");
+
+                    b.ToTable("contract", "contract", t =>
+                        {
+                            t.HasCheckConstraint("ck_contract_status", "[status] BETWEEN 1 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Contracts.ContractEntitlement", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<int>("ConsumedUnits")
+                        .HasColumnType("int")
+                        .HasColumnName("consumed_units");
+
+                    b.Property<long>("ContractId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("contract_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<int>("ReservedUnits")
+                        .HasColumnType("int")
+                        .HasColumnName("reserved_units");
+
+                    b.Property<long?>("ResourceCategoryId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("resource_category_id");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("rule_version");
+
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("TotalUnits")
+                        .HasColumnType("int")
+                        .HasColumnName("total_units");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(19, 2)
+                        .HasColumnType("decimal(19,2)")
+                        .HasColumnName("unit_price");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ResourceCategoryId");
+
+                    b.HasIndex("TenantId", "ServiceId");
+
+                    b.HasIndex("TenantId", "ContractId", "ServiceId")
+                        .IsUnique()
+                        .HasFilter("[resource_category_id] IS NULL");
+
+                    b.HasIndex("TenantId", "ContractId", "ServiceId", "ResourceCategoryId")
+                        .IsUnique()
+                        .HasFilter("[resource_category_id] IS NOT NULL");
+
+                    b.ToTable("entitlement", "contract", t =>
+                        {
+                            t.HasCheckConstraint("ck_contract_entitlement_units", "[total_units] >= 1 AND [reserved_units] >= 0 AND [consumed_units] >= 0 AND [reserved_units] + [consumed_units] <= [total_units]");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Contracts.EntitlementReservation", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booking_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset?>("ConsumedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("consumed_utc");
+
+                    b.Property<long>("ContractId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("contract_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<long>("EntitlementId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("entitlement_id");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("ReleaseReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("release_reason");
+
+                    b.Property<DateTimeOffset?>("ReleasedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("released_utc");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .HasColumnName("request_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("request_id");
+
+                    b.Property<DateTimeOffset>("ReservedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("reserved_utc");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("int")
+                        .HasColumnName("units");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BookingId");
+
+                    b.HasIndex("TenantId", "ContractId");
+
+                    b.HasIndex("TenantId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "EntitlementId", "BookingId")
+                        .IsUnique();
+
+                    b.ToTable("entitlement_reservation", "contract", t =>
+                        {
+                            t.HasCheckConstraint("ck_entitlement_reservation_status", "[status] BETWEEN 1 AND 3");
+                        });
                 });
 
             modelBuilder.Entity("BookDoc2026.Domain.Foundation.AuditEvent", b =>
@@ -1444,273 +2427,721 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         {
                             Id = 16,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Resources.Manage",
+                            ClaimValue = "Queues.Call",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 17,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Resources.Status.Manage",
+                            ClaimValue = "Queues.Cancel",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 18,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Resources.View",
+                            ClaimValue = "Queues.CheckIn",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 19,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Availability.Manage",
+                            ClaimValue = "Queues.Display.View",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 20,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Availability.View",
+                            ClaimValue = "Queues.Priority.Manage",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 21,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Holds.Create",
+                            ClaimValue = "Queues.Progress",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 22,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Holds.Release",
+                            ClaimValue = "Queues.ServicePoints.Manage",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 23,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Stakeholders.Documents.Manage",
+                            ClaimValue = "Queues.View",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 24,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Stakeholders.Manage",
+                            ClaimValue = "Resources.Manage",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 25,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Stakeholders.View",
+                            ClaimValue = "Resources.Status.Manage",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 26,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Tenants.Approve",
+                            ClaimValue = "Resources.View",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 27,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Tenants.Register",
+                            ClaimValue = "Scheduling.Availability.Manage",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 28,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Users.BranchAdministrators.Manage",
+                            ClaimValue = "Scheduling.Availability.View",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 29,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Users.Manage",
+                            ClaimValue = "Scheduling.Bookings.Cancel",
                             RoleId = 1L
                         },
                         new
                         {
                             Id = 30,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Branches.Configuration.Manage",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Bookings.Confirm",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 31,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Branches.View",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Bookings.Reschedule",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 32,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Catalog.Manage",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Bookings.View",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 33,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Catalog.View",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Holds.Create",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 34,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Callbacks.View",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Holds.Release",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 35,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Deliveries.View",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Waitlist.Manage",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 36,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Preferences.Manage",
-                            RoleId = 2L
+                            ClaimValue = "Scheduling.Waitlist.View",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 37,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Preferences.View",
-                            RoleId = 2L
+                            ClaimValue = "Stakeholders.Documents.Manage",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 38,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Templates.Manage",
-                            RoleId = 2L
+                            ClaimValue = "Stakeholders.Manage",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 39,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Templates.Publish",
-                            RoleId = 2L
+                            ClaimValue = "Stakeholders.View",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 40,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Messaging.Templates.View",
-                            RoleId = 2L
+                            ClaimValue = "Tenants.Approve",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 41,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Patients.Register",
-                            RoleId = 2L
+                            ClaimValue = "Tenants.Register",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 42,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Patients.Search",
-                            RoleId = 2L
+                            ClaimValue = "Users.BranchAdministrators.Manage",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 43,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Patients.Update",
-                            RoleId = 2L
+                            ClaimValue = "Users.Manage",
+                            RoleId = 1L
                         },
                         new
                         {
                             Id = 44,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Patients.View",
+                            ClaimValue = "Branches.Configuration.Manage",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 45,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Resources.Manage",
+                            ClaimValue = "Branches.View",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 46,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Resources.Status.Manage",
+                            ClaimValue = "Catalog.Manage",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 47,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Resources.View",
+                            ClaimValue = "Catalog.View",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 48,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Availability.Manage",
+                            ClaimValue = "Messaging.Callbacks.View",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 49,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Availability.View",
+                            ClaimValue = "Messaging.Deliveries.View",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 50,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Holds.Create",
+                            ClaimValue = "Messaging.Preferences.Manage",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 51,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Scheduling.Holds.Release",
+                            ClaimValue = "Messaging.Preferences.View",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 52,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Stakeholders.Documents.Manage",
+                            ClaimValue = "Messaging.Templates.Manage",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 53,
                             ClaimType = "bookdoc:permission",
-                            ClaimValue = "Stakeholders.Manage",
+                            ClaimValue = "Messaging.Templates.Publish",
                             RoleId = 2L
                         },
                         new
                         {
                             Id = 54,
                             ClaimType = "bookdoc:permission",
+                            ClaimValue = "Messaging.Templates.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 55,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Patients.Register",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 56,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Patients.Search",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 57,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Patients.Update",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 58,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Patients.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 59,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.Call",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 60,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.Cancel",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 61,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.CheckIn",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 62,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.Display.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 63,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.Priority.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 64,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.Progress",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 65,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.ServicePoints.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 66,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Queues.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 67,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Resources.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 68,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Resources.Status.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 69,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Resources.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 70,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Availability.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 71,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Availability.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 72,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Bookings.Cancel",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 73,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Bookings.Confirm",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 74,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Bookings.Reschedule",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 75,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Bookings.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 76,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Holds.Create",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 77,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Holds.Release",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 78,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Waitlist.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 79,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Scheduling.Waitlist.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 80,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Stakeholders.Documents.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 81,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Stakeholders.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 82,
+                            ClaimType = "bookdoc:permission",
                             ClaimValue = "Stakeholders.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 83,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Entitlements.Consume",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 84,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Entitlements.Release",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 85,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Entitlements.Reserve",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 86,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Manage",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 87,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.View",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 88,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Entitlements.Consume",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 89,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Entitlements.Release",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 90,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Entitlements.Reserve",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 91,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 92,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Contracts.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 93,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.Amend",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 94,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.Drafts.Manage",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 95,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.Sign",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 96,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.View",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 97,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.Amend",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 98,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.Drafts.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 99,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.Sign",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 100,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Encounters.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 101,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.Assignments.Manage",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 102,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.Credentials.Verify",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 103,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.Manage",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 104,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.View",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 105,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.Assignments.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 106,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.Credentials.Verify",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 107,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.Manage",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 108,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Practitioners.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 109,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Invoices.Issue",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 110,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Invoices.View",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 111,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Payments.Allocate",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 112,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Payments.Receive",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 113,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Payments.View",
+                            RoleId = 1L
+                        },
+                        new
+                        {
+                            Id = 114,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Invoices.Issue",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 115,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Invoices.View",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 116,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Payments.Allocate",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 117,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Payments.Receive",
+                            RoleId = 2L
+                        },
+                        new
+                        {
+                            Id = 118,
+                            ClaimType = "bookdoc:permission",
+                            ClaimValue = "Billing.Payments.View",
                             RoleId = 2L
                         });
                 });
@@ -2067,6 +3498,238 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BookDoc2026.Domain.Queues.ImagingServicePoint", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("Modality")
+                        .HasColumnType("int")
+                        .HasColumnName("modality");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasColumnName("name");
+
+                    b.Property<long?>("ResourceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("resource_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BranchId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "ResourceId");
+
+                    b.ToTable("imaging_service_point", "queue", t =>
+                        {
+                            t.HasCheckConstraint("ck_imaging_service_point_modality", "[modality] BETWEEN 1 AND 2");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Queues.QueueTicket", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ArrivedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("arrived_utc");
+
+                    b.Property<long?>("BookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booking_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<int>("CallCount")
+                        .HasColumnType("int")
+                        .HasColumnName("call_count");
+
+                    b.Property<DateTimeOffset?>("CalledUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("called_utc");
+
+                    b.Property<DateTimeOffset?>("CancelledUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("cancelled_utc");
+
+                    b.Property<DateTimeOffset?>("CompletedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("completed_utc");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("DisplayToken")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasColumnName("display_token");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("request_id");
+
+                    b.Property<long>("ServicePointId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_point_id");
+
+                    b.Property<DateTimeOffset?>("ServiceStartedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("service_started_utc");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BookingId");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "DisplayToken")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "ServicePointId", "BookingId")
+                        .IsUnique()
+                        .HasFilter("[booking_id] IS NOT NULL AND [status] >= 1 AND [status] <= 4");
+
+                    b.HasIndex("TenantId", "BranchId", "ServicePointId", "Status", "Priority", "ArrivedUtc");
+
+                    b.ToTable("ticket", "queue", t =>
+                        {
+                            t.HasCheckConstraint("ck_queue_ticket_priority", "[priority] BETWEEN 1 AND 2");
+
+                            t.HasCheckConstraint("ck_queue_ticket_status", "[status] BETWEEN 1 AND 6");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Queues.QueueTicketEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("action");
+
+                    b.Property<long>("ActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("actor_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<int?>("FromStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("from_status");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("TicketId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<long>("TicketVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("ticket_version");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("to_status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "TicketId", "TicketVersion")
+                        .IsUnique();
+
+                    b.ToTable("ticket_event", "queue");
+                });
+
             modelBuilder.Entity("BookDoc2026.Domain.Scheduling.AvailabilityException", b =>
                 {
                     b.Property<long>("Id")
@@ -2210,6 +3873,273 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BookDoc2026.Domain.Scheduling.Booking", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BookingNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasColumnName("booking_number");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTimeOffset?>("CancelledUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("cancelled_utc");
+
+                    b.Property<DateTimeOffset>("ConfirmedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("confirmed_utc");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<DateTimeOffset>("EndUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("end_utc");
+
+                    b.Property<long>("HoldId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("hold_id");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<long?>("PreviousBookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("previous_booking_id");
+
+                    b.Property<long?>("ReplacedByBookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("replaced_by_booking_id");
+
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_id");
+
+                    b.Property<DateTimeOffset>("StartUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("start_utc");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.Property<long?>("WaitlistEntryId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("waitlist_entry_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "BookingNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "HoldId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "PreviousBookingId");
+
+                    b.HasIndex("TenantId", "ReplacedByBookingId");
+
+                    b.HasIndex("TenantId", "ServiceId");
+
+                    b.HasIndex("TenantId", "WaitlistEntryId")
+                        .IsUnique()
+                        .HasFilter("[waitlist_entry_id] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "BranchId", "StartUtc", "Status");
+
+                    b.ToTable("booking", "scheduling", t =>
+                        {
+                            t.HasCheckConstraint("ck_booking_interval", "[start_utc] < [end_utc]");
+
+                            t.HasCheckConstraint("ck_booking_status", "[status] BETWEEN 1 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Scheduling.BookingResourceAllocation", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("booking_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<long>("HoldReservationId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("hold_reservation_id");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("RequirementRoleCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("requirement_role_code");
+
+                    b.Property<long>("ResourceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("resource_id");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "HoldReservationId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BookingId", "ResourceId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "BranchId", "ResourceId");
+
+                    b.ToTable("booking_resource", "scheduling", t =>
+                        {
+                            t.HasCheckConstraint("ck_booking_resource_quantity", "[quantity] BETWEEN 1 AND 1000");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Scheduling.BookingWaitlistEntry", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<DateTimeOffset>("EarliestStartUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("earliest_start_utc");
+
+                    b.Property<DateTimeOffset>("LatestStartUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("latest_start_utc");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PatientId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("patient_id");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int")
+                        .HasColumnName("priority");
+
+                    b.Property<long?>("PromotedBookingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("promoted_booking_id");
+
+                    b.Property<DateTimeOffset?>("PromotedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("promoted_utc");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.Property<string>("WithdrawalReason")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)")
+                        .HasColumnName("withdrawal_reason");
+
+                    b.Property<DateTimeOffset?>("WithdrawnUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("withdrawn_utc");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "PromotedBookingId")
+                        .IsUnique()
+                        .HasFilter("[promoted_booking_id] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "ServiceId");
+
+                    b.HasIndex("TenantId", "BranchId", "ServiceId", "Status", "Priority", "CreatedUtc");
+
+                    b.ToTable("booking_waitlist", "scheduling", t =>
+                        {
+                            t.HasCheckConstraint("ck_booking_waitlist_priority", "[priority] BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("ck_booking_waitlist_status", "[status] BETWEEN 1 AND 3");
+
+                            t.HasCheckConstraint("ck_booking_waitlist_window", "[earliest_start_utc] <= [latest_start_utc]");
+                        });
+                });
+
             modelBuilder.Entity("BookDoc2026.Domain.Scheduling.ResourceReservation", b =>
                 {
                     b.Property<long>("Id")
@@ -2239,6 +4169,11 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int")
                         .HasColumnName("quantity");
+
+                    b.Property<string>("RequirementRoleCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("requirement_role_code");
 
                     b.Property<long>("ResourceId")
                         .HasColumnType("bigint")
@@ -2795,6 +4730,330 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BookDoc2026.Domain.Workforce.PractitionerAssignment", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("BookableResourceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("bookable_resource_id");
+
+                    b.Property<long>("BranchId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_from");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date")
+                        .HasColumnName("effective_to");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PractitionerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("practitioner_id");
+
+                    b.Property<string>("RoleCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("role_code");
+
+                    b.Property<long>("ServiceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "ServiceId");
+
+                    b.HasIndex("TenantId", "BranchId", "BookableResourceId");
+
+                    b.HasIndex("TenantId", "PractitionerId", "BranchId", "ServiceId", "Status", "EffectiveFrom");
+
+                    b.ToTable("practitioner_assignment", "workforce", t =>
+                        {
+                            t.HasCheckConstraint("ck_workforce_assignment_status", "[status] BETWEEN 1 AND 3");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Workforce.PractitionerCredential", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<string>("CredentialTypeCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("credential_type_code");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("decision_reason");
+
+                    b.Property<string>("IssuingAuthority")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)")
+                        .HasColumnName("issuing_authority");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<long>("PractitionerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("practitioner_id");
+
+                    b.Property<string>("RegistrationNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("registration_number");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_from");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_to");
+
+                    b.Property<int>("VerificationStatus")
+                        .HasColumnType("int")
+                        .HasColumnName("verification_status");
+
+                    b.Property<long?>("VerifiedByActorId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("verified_by_actor_id");
+
+                    b.Property<DateTimeOffset?>("VerifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("verified_utc");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "CredentialTypeCode", "IssuingAuthority", "RegistrationNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "PractitionerId", "VerificationStatus", "ValidTo");
+
+                    b.ToTable("practitioner_credential", "workforce", t =>
+                        {
+                            t.HasCheckConstraint("ck_workforce_credential_status", "[verification_status] BETWEEN 1 AND 3");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Workforce.PractitionerProfile", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_utc");
+
+                    b.Property<long>("IdentitySubjectId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("identity_subject_id");
+
+                    b.Property<DateTimeOffset>("ModifiedUtc")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("modified_utc");
+
+                    b.Property<string>("PractitionerCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("practitioner_code");
+
+                    b.Property<string>("PractitionerTypeCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("practitioner_type_code");
+
+                    b.Property<long>("StakeholderId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("stakeholder_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TenantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentitySubjectId");
+
+                    b.HasIndex("TenantId", "IdentitySubjectId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "PractitionerCode")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "StakeholderId")
+                        .IsUnique();
+
+                    b.ToTable("practitioner", "workforce", t =>
+                        {
+                            t.HasCheckConstraint("ck_workforce_practitioner_status", "[status] BETWEEN 1 AND 4");
+                        });
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.FinancialDocumentSnapshot", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.Invoice", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Contracts.ContractAgreement", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ContractId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.InvoiceLine", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Billing.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "InvoiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ClinicalService", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.Payment", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.PaymentAllocation", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Billing.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId", "InvoiceId")
+                        .HasPrincipalKey("TenantId", "BranchId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Billing.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId", "PaymentId")
+                        .HasPrincipalKey("TenantId", "BranchId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Billing.PaymentTender", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Billing.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PaymentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BookDoc2026.Domain.Catalog.BookableResource", b =>
                 {
                     b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
@@ -2863,6 +5122,53 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Clinical.ClinicalEncounter", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ClinicalService", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Clinical.EncounterRevision", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Clinical.ClinicalEncounter", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EncounterId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Clinical.EncounterRevision", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ParentRevisionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("BookDoc2026.Domain.Communications.CommunicationPreferenceEvent", b =>
@@ -2956,6 +5262,70 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                     b.HasOne("BookDoc2026.Domain.Foundation.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Contracts.ContractAgreement", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Contracts.ContractEntitlement", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Contracts.ContractAgreement", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ContractId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ResourceCategory", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ResourceCategoryId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ClinicalService", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Contracts.EntitlementReservation", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Contracts.ContractAgreement", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ContractId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Contracts.ContractEntitlement", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EntitlementId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -3085,6 +5455,62 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BookDoc2026.Domain.Queues.ImagingServicePoint", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.BookableResource", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId", "ResourceId")
+                        .HasPrincipalKey("TenantId", "BranchId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Queues.QueueTicket", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Queues.ImagingServicePoint", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServicePointId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Queues.QueueTicketEvent", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Queues.QueueTicket", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TicketId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BookDoc2026.Domain.Scheduling.AvailabilityException", b =>
                 {
                     b.HasOne("BookDoc2026.Domain.Catalog.BookableResource", null)
@@ -3114,6 +5540,109 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         .WithMany()
                         .HasForeignKey("TenantId", "BranchId", "ResourceId")
                         .HasPrincipalKey("TenantId", "BranchId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Scheduling.Booking", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Scheduling.SchedulingHold", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "HoldId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PreviousBookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ReplacedByBookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ClinicalService", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Scheduling.BookingWaitlistEntry", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WaitlistEntryId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Scheduling.BookingResourceAllocation", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Scheduling.ResourceReservation", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "HoldReservationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.BookableResource", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId", "ResourceId")
+                        .HasPrincipalKey("TenantId", "BranchId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Scheduling.BookingWaitlistEntry", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Scheduling.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PromotedBookingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ClinicalService", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -3215,6 +5744,62 @@ namespace BookDoc2026.Infrastructure.Data.Migrations
                         .WithOne()
                         .HasForeignKey("BookDoc2026.Domain.Stakeholders.StakeholderPerson", "TenantId", "StakeholderId")
                         .HasPrincipalKey("BookDoc2026.Domain.Stakeholders.Stakeholder", "TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Workforce.PractitionerAssignment", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Foundation.Branch", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Workforce.PractitionerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PractitionerId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.ClinicalService", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Catalog.BookableResource", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "BranchId", "BookableResourceId")
+                        .HasPrincipalKey("TenantId", "BranchId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Workforce.PractitionerCredential", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Workforce.PractitionerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PractitionerId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BookDoc2026.Domain.Workforce.PractitionerProfile", b =>
+                {
+                    b.HasOne("BookDoc2026.Domain.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("IdentitySubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BookDoc2026.Domain.Stakeholders.Stakeholder", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StakeholderId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

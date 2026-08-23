@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject PortalSessionState Session
+@inject AuthApiClient Auth
+@inject NavigationManager Navigation
+
+<header class="topbar"><a class="brand" href="/">BOOKDOC2026 Portal</a><nav>@if (Session.IsAuthenticated) { <a href="/">Home</a>@if (CanUseCashier) { <a href="/billing/cashier">Cashier</a> }@if (CanCheckIn) { <a href="/radiology/check-in">Reception</a> }@if (CanUseRadiology) { <a href="/radiology">Radiology</a> } }</nav><div class="session-nav">@if (Session.IsAuthenticated) { <span>@Session.Session!.DisplayName</span><button @onclick="SignOutAsync">Sign out</button> } else { <a href="/login">Sign in</a> }</div></header>
+<main class="shell">@Body</main>
+
+@code {
+    private bool CanUseRadiology => Session.HasPermission(FoundationPermissions.QueuesView);
+    private bool CanCheckIn => Session.HasPermission(FoundationPermissions.PatientsSearch)
+        && Session.HasPermission(FoundationPermissions.QueuesCheckIn);
+    private bool CanUseCashier => Session.HasPermission(FoundationPermissions.PatientsSearch)
+        && Session.HasPermission(FoundationPermissions.CatalogView)
+        && Session.HasPermission(FoundationPermissions.BillingInvoicesView)
+        && Session.HasPermission(FoundationPermissions.BillingInvoicesIssue)
+        && Session.HasPermission(FoundationPermissions.BillingPaymentsView)
+        && Session.HasPermission(FoundationPermissions.BillingPaymentsReceive)
+        && Session.HasPermission(FoundationPermissions.BillingPaymentsAllocate);
+    protected override void OnInitialized() => Session.Changed += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    private async Task SignOutAsync() { await Session.SignOutAsync(Auth); Navigation.NavigateTo("/login"); }
+    public void Dispose() => Session.Changed -= Refresh;
+}

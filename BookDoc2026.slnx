@@ -9,6 +9,7 @@
     <Project Path="src/BookDoc2026.Client/BookDoc2026.Client.csproj" />
     <Project Path="src/BookDoc2026.Contracts/BookDoc2026.Contracts.csproj" />
     <Project Path="src/BookDoc2026.DocumentService/BookDoc2026.DocumentService.csproj" />
+    <Project Path="src/BookDoc2026.DevelopmentFixtures/BookDoc2026.DevelopmentFixtures.csproj" />
     <Project Path="src/BookDoc2026.Domain/BookDoc2026.Domain.csproj" />
     <Project Path="src/BookDoc2026.ErrorHandling/BookDoc2026.ErrorHandling.csproj" />
     <Project Path="src/BookDoc2026.Infrastructure/BookDoc2026.Infrastructure.csproj" />
