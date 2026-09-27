@@ -2,6 +2,7 @@ using BookDoc2026.Domain.Catalog;
 using BookDoc2026.Domain.Foundation;
 using BookDoc2026.Domain.Patients;
 using BookDoc2026.Domain.Scheduling;
+using BookDoc2026.Domain.Workforce;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -181,5 +182,74 @@ internal sealed class BookingResourceAllocationConfiguration : IEntityTypeConfig
         builder.HasOne<BookableResource>().WithMany()
             .HasForeignKey(x => new { x.TenantId, x.BranchId, x.ResourceId })
             .HasPrincipalKey(x => new { x.TenantId, x.BranchId, x.Id });
+    }
+}
+
+internal sealed class BookingSlotConfiguration : IEntityTypeConfiguration<BookingSlot>
+{
+    public void Configure(EntityTypeBuilder<BookingSlot> builder)
+    {
+        builder.ToTable("booking_slot", "scheduling", table =>
+        {
+            table.HasCheckConstraint("ck_booking_slot_interval", "[start_utc] < [end_utc]");
+            table.HasCheckConstraint("ck_booking_slot_duration", "[duration_minutes] BETWEEN 1 AND 1440");
+            table.HasCheckConstraint("ck_booking_slot_capacity", "[max_capacity] >= 1");
+            table.HasCheckConstraint("ck_booking_slot_status", "[status] BETWEEN 1 AND 5");
+        });
+        builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.Property(x => x.BlockReason).HasMaxLength(250);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.HasIndex(x => new { x.TenantId, x.BranchId, x.PractitionerId, x.SlotDate });
+        builder.HasIndex(x => new { x.TenantId, x.BranchId, x.PractitionerId, x.StartUtc, x.EndUtc });
+        builder.HasIndex(x => new { x.TenantId, x.BranchId, x.Status, x.SlotDate });
+        builder.HasOne<Branch>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.BranchId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<PractitionerProfile>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PractitionerId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<ClinicalService>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ServiceId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .IsRequired(false);
+    }
+}
+
+internal sealed class BookingRequestConfiguration : IEntityTypeConfiguration<BookingRequest>
+{
+    public void Configure(EntityTypeBuilder<BookingRequest> builder)
+    {
+        builder.ToTable("booking_request", "scheduling", table =>
+        {
+            table.HasCheckConstraint("ck_booking_request_status", "[status] BETWEEN 1 AND 5");
+        });
+        builder.HasKey(x => x.Id);
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.Property(x => x.PatientFullName).HasMaxLength(120).IsRequired();
+        builder.Property(x => x.PatientPhone).HasMaxLength(25).IsRequired();
+        builder.Property(x => x.PatientEmail).HasMaxLength(120);
+        builder.Property(x => x.PreferredTimeSlot).HasMaxLength(60).IsRequired();
+        builder.Property(x => x.ReasonForVisit).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.ReviewNotes).HasMaxLength(500);
+        builder.Property(x => x.ReviewedByStaffId).HasMaxLength(100);
+        builder.Property(x => x.Version).IsConcurrencyToken();
+        builder.HasIndex(x => new { x.TenantId, x.BranchId, x.Status, x.PreferredDate });
+        builder.HasIndex(x => new { x.TenantId, x.PatientPhone });
+        builder.HasOne<Branch>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.BranchId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Patient>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PatientId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .IsRequired(false);
+        builder.HasOne<PractitionerProfile>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.PreferredPractitionerId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .IsRequired(false);
+        builder.HasOne<ClinicalService>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ServiceId })
+            .HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .IsRequired(false);
     }
 }

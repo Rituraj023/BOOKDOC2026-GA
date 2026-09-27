@@ -4,7 +4,7 @@
 @inject AuthApiClient Auth
 @inject NavigationManager Navigation
 
-<header class="topbar"><a class="brand" href="/">BOOKDOC2026 Portal</a><nav>@if (Session.IsAuthenticated) { <a href="/">Home</a>@if (CanCheckIn) { <a href="/reception">OPD Reception</a> }@if (CanUseClinical) { <a href="/clinical/encounters">Clinical</a> }@if (CanUsePhysiotherapy) { <a href="/physiotherapy">Physiotherapy</a> }@if (CanUseCashier) { <a href="/billing/cashier">Cashier</a> }@if (CanUseRadiology) { <a href="/radiology">Radiology</a> } }</nav><div class="session-nav">@if (Session.IsAuthenticated) { <span>@Session.Session!.DisplayName</span><button @onclick="SignOutAsync">Sign out</button> } else { <a href="/login">Sign in</a> }</div></header>
+<header class="topbar"><a class="brand" href="/">BOOKDOC2026 Portal</a><nav><a href="/book-appointment">Book Slot</a><a href="/request-appointment">Request Appointment</a>@if (Session.IsAuthenticated) { <a href="/">Home</a>@if (CanCheckIn) { <a href="/reception">OPD Reception</a> }@if (CanUseClinical) { <a href="/clinical/encounters">Clinical</a> }@if (CanUsePhysiotherapy) { <a href="/physiotherapy">Physiotherapy</a> }@if (CanUseCashier) { <a href="/billing/cashier">Cashier</a> }@if (CanUseRadiology) { <a href="/radiology">Radiology</a> } }</nav><div class="session-nav">@if (Session.IsAuthenticated) { <span>@Session.Session!.DisplayName</span><button @onclick="SignOutAsync">Sign out</button> } else { <a href="/login">Sign in</a> }</div></header>
 <main class="shell">@Body</main>
 
 @code {

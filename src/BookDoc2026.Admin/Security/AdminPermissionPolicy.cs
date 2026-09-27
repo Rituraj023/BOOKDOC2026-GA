@@ -30,4 +30,18 @@ public static class AdminPermissionPolicy
         return granted.Contains(FoundationPermissions.BillingInvoicesView)
             || granted.Contains(FoundationPermissions.BillingPaymentsView);
     }
+
+    public static bool CanManageDoctorSlots(IEnumerable<string> permissions)
+    {
+        var granted = permissions.ToHashSet(StringComparer.Ordinal);
+        return granted.Contains(FoundationPermissions.SchedulingAvailabilityManage)
+            || granted.Contains(FoundationPermissions.SchedulingAvailabilityView);
+    }
+
+    public static bool CanReviewBookingRequests(IEnumerable<string> permissions)
+    {
+        var granted = permissions.ToHashSet(StringComparer.Ordinal);
+        return granted.Contains(FoundationPermissions.SchedulingBookingsView)
+            || granted.Contains(FoundationPermissions.SchedulingBookingsConfirm);
+    }
 }

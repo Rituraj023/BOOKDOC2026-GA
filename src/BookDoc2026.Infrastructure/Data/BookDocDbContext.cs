@@ -90,6 +90,8 @@ public sealed class BookDocDbContext(
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<BookingResourceAllocation> BookingResourceAllocations => Set<BookingResourceAllocation>();
     public DbSet<BookingWaitlistEntry> BookingWaitlistEntries => Set<BookingWaitlistEntry>();
+    public DbSet<BookingSlot> BookingSlots => Set<BookingSlot>();
+    public DbSet<BookingRequest> BookingRequests => Set<BookingRequest>();
     public DbSet<ImagingServicePoint> ImagingServicePoints => Set<ImagingServicePoint>();
     public DbSet<QueueTicket> QueueTickets => Set<QueueTicket>();
     public DbSet<QueueTicketEvent> QueueTicketEvents => Set<QueueTicketEvent>();
@@ -172,6 +174,10 @@ public sealed class BookDocDbContext(
         modelBuilder.Entity<BookingResourceAllocation>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<BookingWaitlistEntry>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<BookingSlot>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<BookingRequest>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<ImagingServicePoint>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);

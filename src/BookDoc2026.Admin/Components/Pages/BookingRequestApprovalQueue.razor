@@ -1,0 +1,404 @@
+@page "/scheduling/booking-requests"
+@inject BookDocApiClient Api
+@inject AdminSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Booking Request Approval Desk | BOOKDOC2026 Admin</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel">
+        <h1>Session required</h1>
+        <p>Please sign in to access the Booking Request Approval Desk.</p>
+        <a class="primary-link" href="/login">Sign in</a>
+    </section>
+}
+else if (!CanReview)
+{
+    <section class="panel">
+        <h1>Access not granted</h1>
+        <p>Your administrative role does not have permission to review or approve appointment requests.</p>
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Clinic ERP / Reception & Triage</p>
+            <h1>Booking Request Approval Queue</h1>
+            <p>Review, triage, and approve patient consultation requests submitted via public portals and mobile apps.</p>
+        </div>
+        <ScopeBadge Label="Clinic Staff Triage Desk" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(notificationMessage))
+    {
+        <div class="banner @(isError ? "error" : "success")">
+            @notificationMessage
+        </div>
+    }
+
+    <section class="panel branch-selector">
+        <div class="form-grid" style="grid-template-columns: 2fr 1fr; align-items: flex-end;">
+            <label>
+                Branch Protected ID
+                <input @bind="branchId" placeholder="Enter branch public ID..." />
+            </label>
+            <button class="primary" @onclick="LoadRequestsAsync" disabled="@busy">
+                @(busy ? "Loading Queue..." : "Load Booking Requests")
+            </button>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(branchId))
+    {
+        <!-- Summary Cards -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 1rem; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #b45309;">@pendingCount</div>
+                <div style="font-size: 0.85rem; color: #92400e;">Pending Approval</div>
+            </div>
+            <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 1rem; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #1d4ed8;">@underReviewCount</div>
+                <div style="font-size: 0.85rem; color: #1e40af;">Under Review</div>
+            </div>
+            <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 8px; padding: 1rem; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #047857;">@approvedCount</div>
+                <div style="font-size: 0.85rem; color: #065f46;">Approved</div>
+            </div>
+            <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 1rem; text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 700; color: #b91c1c;">@declinedCount</div>
+                <div style="font-size: 0.85rem; color: #991b1b;">Declined</div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Worklist</p>
+                    <h2>Patient Appointment Requests</h2>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <select @bind="statusFilter" @bind:after="ApplyFilter" style="width: auto;">
+                        <option value="">All Statuses</option>
+                        <option value="PendingApproval">Pending Approval</option>
+                        <option value="UnderReview">Under Review</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Declined">Declined</option>
+                        <option value="Rescheduled">Rescheduled</option>
+                    </select>
+                    <button class="secondary" @onclick="LoadRequestsAsync" disabled="@busy">Refresh</button>
+                </div>
+            </div>
+
+            @if (filteredRequests.Count == 0)
+            {
+                <p class="empty">No appointment booking requests matching the filter criteria.</p>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Requested Date</th>
+                                <th>Preferred Time</th>
+                                <th>Patient Details</th>
+                                <th>Requested Doctor</th>
+                                <th>Service</th>
+                                <th>Reason For Visit</th>
+                                <th>Status</th>
+                                <th>Staff Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var req in filteredRequests)
+                            {
+                                <tr>
+                                    <td><strong>@req.PreferredDate.ToString("dd-MMM-yyyy")</strong></td>
+                                    <td>@req.PreferredTimeSlot</td>
+                                    <td>
+                                        <div><strong>@req.PatientFullName</strong></div>
+                                        <div style="font-size: 0.85rem; color: #64748b;">📞 @req.PatientPhone</div>
+                                        @if (!string.IsNullOrWhiteSpace(req.PatientEmail))
+                                        {
+                                            <div style="font-size: 0.8rem; color: #94a3b8;">✉️ @req.PatientEmail</div>
+                                        }
+                                    </td>
+                                    <td>@(req.PreferredPractitionerName ?? "Any Available Doctor")</td>
+                                    <td>@(req.ServiceName ?? "General OPD")</td>
+                                    <td style="max-width: 220px; white-space: normal;">@req.ReasonForVisit</td>
+                                    <td>
+                                        <span class="badge @GetBadgeClass(req.Status)">@req.Status</span>
+                                    </td>
+                                    <td style="max-width: 180px; white-space: normal; font-size: 0.85rem;">
+                                        @(req.ReviewNotes ?? "—")
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                                            @if (req.Status == "PendingApproval" || req.Status == "UnderReview" || req.Status == "Rescheduled")
+                                            {
+                                                <button class="primary btn-sm" @onclick="() => PromptApprove(req)">Approve</button>
+                                                <button class="secondary btn-sm" @onclick="() => PromptReschedule(req)">Reschedule</button>
+                                                <button class="secondary btn-sm danger" @onclick="() => PromptDecline(req)">Decline</button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+
+    <!-- Approve Dialog Modal -->
+    @if (approvingRequest != null)
+    {
+        <div class="modal-overlay">
+            <div class="modal-card">
+                <h3>Approve Booking Request</h3>
+                <p><strong>Patient:</strong> @approvingRequest.PatientFullName | <strong>Date:</strong> @approvingRequest.PreferredDate.ToString("dd-MMM-yyyy") (@approvingRequest.PreferredTimeSlot)</p>
+                <div class="form-grid" style="margin-top: 1rem;">
+                    <label>
+                        Assign Attending Doctor
+                        <select @bind="selectedDoctorToAssign">
+                            <option value="">-- Use Preferred Doctor --</option>
+                            @foreach (var doc in doctors)
+                            {
+                                <option value="@doc.Id">@doc.DisplayName</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Approval Notes / Instructions for Patient
+                        <input @bind="approvalNotesInput" placeholder="e.g. Please bring previous reports, report to Room 102." />
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button class="secondary" @onclick="() => approvingRequest = null">Cancel</button>
+                    <button class="primary" @onclick="ConfirmApproveAsync" disabled="@busy">Confirm Approval</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Decline Dialog Modal -->
+    @if (decliningRequest != null)
+    {
+        <div class="modal-overlay">
+            <div class="modal-card">
+                <h3>Decline Booking Request</h3>
+                <p>Patient: @decliningRequest.PatientFullName | Date: @decliningRequest.PreferredDate.ToString("dd-MMM-yyyy")</p>
+                <label style="margin-top: 1rem; display: block;">
+                    Reason for Declining (Sent to patient)
+                    <input @bind="declineReasonInput" placeholder="e.g. Doctor unavailable on selected date, please rebook for next week." />
+                </label>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button class="secondary" @onclick="() => decliningRequest = null">Cancel</button>
+                    <button class="primary danger" @onclick="ConfirmDeclineAsync" disabled="@(busy || string.IsNullOrWhiteSpace(declineReasonInput))">Confirm Decline</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Reschedule Dialog Modal -->
+    @if (reschedulingRequest != null)
+    {
+        <div class="modal-overlay">
+            <div class="modal-card">
+                <h3>Suggest Reschedule Details</h3>
+                <p>Patient: @reschedulingRequest.PatientFullName</p>
+                <label style="margin-top: 1rem; display: block;">
+                    Offered Alternative Date & Time Slot Notes
+                    <input @bind="rescheduleNotesInput" placeholder="e.g. Doctor available on tomorrow 03:00 PM. Please confirm if suitable." />
+                </label>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button class="secondary" @onclick="() => reschedulingRequest = null">Cancel</button>
+                    <button class="primary" @onclick="ConfirmRescheduleAsync" disabled="@(busy || string.IsNullOrWhiteSpace(rescheduleNotesInput))">Send Reschedule Offer</button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private string branchId = string.Empty;
+    private string statusFilter = string.Empty;
+    private List<BookingRequestResponse> allRequests = new();
+    private List<BookingRequestResponse> filteredRequests = new();
+    private List<PractitionerSummaryResponse> doctors = new();
+
+    private BookingRequestResponse? approvingRequest;
+    private string selectedDoctorToAssign = string.Empty;
+    private string approvalNotesInput = string.Empty;
+
+    private BookingRequestResponse? decliningRequest;
+    private string declineReasonInput = string.Empty;
+
+    private BookingRequestResponse? reschedulingRequest;
+    private string rescheduleNotesInput = string.Empty;
+
+    private string? notificationMessage;
+    private bool isError;
+    private bool busy;
+
+    private bool CanReview => AdminPermissionPolicy.CanReviewBookingRequests(Session.Permissions);
+
+    private int pendingCount => allRequests.Count(r => r.Status == "PendingApproval");
+    private int underReviewCount => allRequests.Count(r => r.Status == "UnderReview");
+    private int approvedCount => allRequests.Count(r => r.Status == "Approved");
+    private int declinedCount => allRequests.Count(r => r.Status == "Declined");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.IsAuthenticated && !string.IsNullOrWhiteSpace(Session.Session?.Scope?.BranchId))
+        {
+            branchId = Session.Session.Scope.BranchId;
+            await LoadRequestsAsync();
+        }
+    }
+
+    private async Task LoadRequestsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        busy = true;
+        notificationMessage = null;
+        try
+        {
+            var requestsTask = Api.GetBookingRequestsAsync(branchId);
+            var rosterTask = Api.ListPractitionersAsync(branchId);
+            await Task.WhenAll(requestsTask, rosterTask);
+
+            allRequests = (await requestsTask).ToList();
+            doctors = (await rosterTask).ToList();
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Failed to load booking requests: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(statusFilter))
+        {
+            filteredRequests = allRequests;
+        }
+        else
+        {
+            filteredRequests = allRequests.Where(r => r.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private void PromptApprove(BookingRequestResponse req)
+    {
+        approvingRequest = req;
+        selectedDoctorToAssign = req.PreferredPractitionerId ?? string.Empty;
+        approvalNotesInput = "Appointment confirmed. Please arrive 10 minutes prior to your consultation.";
+    }
+
+    private async Task ConfirmApproveAsync()
+    {
+        if (approvingRequest == null) return;
+        busy = true;
+        try
+        {
+            var command = new ApproveBookingRequest(
+                AssignedPractitionerId: string.IsNullOrWhiteSpace(selectedDoctorToAssign) ? null : selectedDoctorToAssign,
+                Notes: approvalNotesInput);
+
+            await Api.ApproveBookingRequestAsync(branchId, approvingRequest.Id, command);
+            approvingRequest = null;
+            notificationMessage = "Booking request has been approved!";
+            isError = false;
+            await LoadRequestsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error approving request: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void PromptDecline(BookingRequestResponse req)
+    {
+        decliningRequest = req;
+        declineReasonInput = "Doctor is fully booked on the requested day.";
+    }
+
+    private async Task ConfirmDeclineAsync()
+    {
+        if (decliningRequest == null || string.IsNullOrWhiteSpace(declineReasonInput)) return;
+        busy = true;
+        try
+        {
+            await Api.DeclineBookingRequestAsync(branchId, decliningRequest.Id, new DeclineBookingRequest(declineReasonInput));
+            decliningRequest = null;
+            notificationMessage = "Booking request has been declined.";
+            isError = false;
+            await LoadRequestsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error declining request: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void PromptReschedule(BookingRequestResponse req)
+    {
+        reschedulingRequest = req;
+        rescheduleNotesInput = "Suggested alternative slot: Tomorrow at 10:30 AM.";
+    }
+
+    private async Task ConfirmRescheduleAsync()
+    {
+        if (reschedulingRequest == null || string.IsNullOrWhiteSpace(rescheduleNotesInput)) return;
+        busy = true;
+        try
+        {
+            await Api.RescheduleBookingRequestAsync(branchId, reschedulingRequest.Id, new RescheduleBookingRequestNotice(rescheduleNotesInput));
+            reschedulingRequest = null;
+            notificationMessage = "Reschedule suggestion recorded and sent to patient.";
+            isError = false;
+            await LoadRequestsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error recording reschedule suggestion: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string GetBadgeClass(string status) => status switch
+    {
+        "PendingApproval" => "badge-warning",
+        "UnderReview" => "badge-info",
+        "Approved" => "badge-success",
+        "Declined" => "badge-danger",
+        "Rescheduled" => "badge-default",
+        _ => "badge-default"
+    };
+}

@@ -1,7 +1,7 @@
 # 60. Dual Front-End Architecture: Clinic ERP vs. Public Portal & Doctor Slot / Booking Request Specification
 
-- **Document Version**: 1.0.0
-- **Status**: Draft & Target Architecture
+- **Document Version**: 1.1.0
+- **Status**: Implemented & Verified
 - **Date**: 2026-09-27
 - **Author**: Antigravity & Architecture Team
 
@@ -148,25 +148,36 @@ stateDiagram-v2
 
 ---
 
-## 6. Phased Implementation Roadmap
-
-1. **Phase 1: Domain & Contracts for Slots & Booking Requests (Current Step)**:
-   - Add `BookingSlot` entity and repository to `BookDoc2026.Domain.Scheduling`.
-   - Add `BookingRequest` entity with state machine (`Pending`, `UnderReview`, `Approved`, `Declined`).
-   - Define contracts in `BookDoc2026.Contracts.Scheduling`.
-2. **Phase 2: Application Services & REST API**:
-   - `SlotManagementService`: Batch slot generator and available slot search.
-   - `BookingRequestService`: Submit request from portal, approve/decline in ERP.
-   - Expose endpoints in `SlotsController` and `BookingRequestsController`.
-3. **Phase 3: ERP Internal UI (`BookDoc2026.Admin`)**:
-   - Slot Generator page.
-   - Booking Requests Approval Desk.
-4. **Phase 4: Portal & Mobile Public Booking Screens (`BookDoc2026.Portal`)**:
-   - Pre-approved slot booking view.
-   - Booking request submission & tracker.
+## 6. Implementation Status & Verification
+ 
+- [x] **Phase 1: Domain & Contracts for Slots & Booking Requests (Completed)**:
+   - Added `BookingSlot` entity (`ReserveCapacity`, `ReleaseCapacity`, `Block`, `Unblock`, `Cancel`) with tenant scoping in `BookDoc2026.Domain.Scheduling`.
+   - Added `BookingRequest` entity with lifecycle methods (`Submit`, `MarkUnderReview`, `Approve`, `Decline`, `Reschedule`) in `BookDoc2026.Domain.Scheduling`.
+   - Defined DTOs and command contracts in `BookDoc2026.Contracts.Scheduling`.
+   - Generated EF Core migration: `20260927040409_DoctorSlotsAndBookingRequests.cs`.
+- [x] **Phase 2: Application Services & REST API (Completed)**:
+   - `SlotManagementService`: Batch slot generator with shift breaks, slot queries, blocking/cancelling, and direct booking confirmation.
+   - `BookingRequestService`: Public booking request submission, ERP triage queries, approval, decline, and reschedule workflows.
+   - API endpoints in `DoctorSlotsController` (`/api/v1/branches/{branchId}/doctor-slots/*`) and `BookingRequestsController` (`/api/v1/branches/{branchId}/booking-requests/*`).
+   - SDK client methods in `IBookDocApiClient` and `BookDocApiClient`.
+- [x] **Phase 3: ERP Internal UI (`BookDoc2026.Admin`) (Completed)**:
+   - Doctor Slot Generator (`/scheduling/slots`): Shift setup, slot intervals, break windows, batch generation, and slot list actions (block/unblock/cancel).
+   - Booking Request Approval Queue (`/scheduling/booking-requests`): Triage worklist, status filters, inline approval with doctor assignment, decline reason capture, and reschedule dialogues.
+   - Added navigation links in `AdminLayout.razor` and permission policy gates in `AdminPermissionPolicy.cs`.
+- [x] **Phase 4: Portal & Mobile Public Booking Screens (`BookDoc2026.Portal`) (Completed)**:
+   - Pre-approved slot booking view (`/book-appointment`): Doctor selector, date picker, open slot grid with instant booking confirmation (zero clinic approval required).
+   - Booking request submission & tracker (`/request-appointment`): Flexible request submission and live request status tracking.
+   - Public navigation links updated in `PortalLayout.razor`.
+- [x] **Phase 5: Automated Verification Suite (Completed)**:
+   - 110 Unit Tests (`DoctorSlotAndBookingRequestDomainTests` + domain tests).
+   - 9 Architecture Tests.
+   - 37 Integration Tests (`DoctorSlotAndBookingRequestApiTests` + full API suite).
+   - 156 / 156 total tests passing with 0 warnings and 0 errors.
 
 ---
 
 ## 7. Approval & Document Sign-Off
 - **Architecture Standard**: Clean Architecture, DDD, Multi-Tenant Partitioning.
 - **Safety Policy**: All tests passing, 0 warnings, zero ID exposure in public contracts.
+- **Verification Status**: Approved & Signed Off in CI/CD test run.
+

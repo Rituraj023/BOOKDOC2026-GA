@@ -1,0 +1,556 @@
+@page "/scheduling/slots"
+@inject BookDocApiClient Api
+@inject AdminSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Doctor Slot Generator | BOOKDOC2026 Admin</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel">
+        <h1>Session required</h1>
+        <p>Please sign in to access the Doctor Slot Generator.</p>
+        <a class="primary-link" href="/login">Sign in</a>
+    </section>
+}
+else if (!CanManage)
+{
+    <section class="panel">
+        <h1>Access not granted</h1>
+        <p>Your current administrative role does not have permission to manage doctor schedules.</p>
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Clinic ERP / Scheduling Oversight</p>
+            <h1>Doctor Roster & Pre-Approved Slot Generator</h1>
+            <p>Generate, publish, and manage doctor consultation time slots. Slots created here are pre-approved for instant booking in patient portals.</p>
+        </div>
+        <ScopeBadge Label="Clinic Intranet Only" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(notificationMessage))
+    {
+        <div class="banner @(isError ? "error" : "success")">
+            @notificationMessage
+        </div>
+    }
+
+    <section class="panel branch-selector">
+        <div class="form-grid" style="grid-template-columns: 2fr 1fr; align-items: flex-end;">
+            <label>
+                Branch Protected ID
+                <input @bind="branchId" placeholder="Enter branch public ID..." />
+            </label>
+            <button class="primary" @onclick="LoadBranchDataAsync" disabled="@busy">
+                @(busy ? "Loading..." : "Load Doctors & Slots")
+            </button>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(branchId))
+    {
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Slot Generator Form -->
+            <section class="panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Shift Planning</p>
+                        <h2>Generate Pre-Approved Slots</h2>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <label>
+                        Doctor / Practitioner
+                        <select @bind="selectedPractitionerId">
+                            <option value="">-- Select Doctor --</option>
+                            @foreach (var doc in practitioners)
+                            {
+                                <option value="@doc.Id">@doc.DisplayName (@doc.PractitionerCode)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Clinical Service (Optional)
+                        <select @bind="selectedServiceId">
+                            <option value="">-- General OPD / All Services --</option>
+                            @foreach (var svc in services)
+                            {
+                                <option value="@svc.Id">@svc.Name (@svc.Code)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        From Date
+                        <input type="date" value="@startDate.ToString("yyyy-MM-dd")" @onchange="OnStartDateChanged" />
+                    </label>
+
+                    <label>
+                        To Date
+                        <input type="date" value="@endDate.ToString("yyyy-MM-dd")" @onchange="OnEndDateChanged" />
+                    </label>
+
+                    <label>
+                        Shift Start
+                        <input type="time" value="@shiftStartString" @onchange="OnShiftStartChanged" />
+                    </label>
+
+                    <label>
+                        Shift End
+                        <input type="time" value="@shiftEndString" @onchange="OnShiftEndChanged" />
+                    </label>
+
+                    <label>
+                        Slot Interval
+                        <select @bind="slotDurationMinutes">
+                            <option value="10">10 Minutes</option>
+                            <option value="15">15 Minutes (Default)</option>
+                            <option value="20">20 Minutes</option>
+                            <option value="30">30 Minutes</option>
+                            <option value="45">45 Minutes</option>
+                            <option value="60">60 Minutes</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Capacity Per Slot
+                        <input type="number" min="1" max="50" @bind="maxCapacity" />
+                    </label>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Working Days</label>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        @foreach (var day in Enum.GetValues<DayOfWeek>())
+                        {
+                            <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                                <input type="checkbox" checked="@selectedDays.Contains(day)" @onchange="@(e => ToggleDay(day, e.Value))" />
+                                @day.ToString().Substring(0, 3)
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Optional Shift Break Window</label>
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <label>
+                            Break Start
+                            <input type="time" value="@breakStartString" @onchange="e => breakStartString = e.Value?.ToString()" />
+                        </label>
+                        <label>
+                            Break End
+                            <input type="time" value="@breakEndString" @onchange="e => breakEndString = e.Value?.ToString()" />
+                        </label>
+                    </div>
+                </div>
+
+                <button class="primary" style="margin-top: 1.5rem; width: 100%;" @onclick="GenerateSlotsAsync" disabled="@(busy || string.IsNullOrWhiteSpace(selectedPractitionerId))">
+                    @(busy ? "Publishing Slots..." : "Generate & Publish Pre-Approved Slots")
+                </button>
+            </section>
+
+            <!-- Quick Stats & Filter Card -->
+            <section class="panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Realtime Overview</p>
+                        <h2>Slot Metrics & Filters</h2>
+                    </div>
+                    <button class="secondary" @onclick="ReloadSlotsAsync" disabled="@busy">Refresh</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.75rem; font-weight: 700; color: #047857;">@availableCount</div>
+                        <div style="font-size: 0.85rem; color: #065f46;">Available</div>
+                    </div>
+                    <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.75rem; font-weight: 700; color: #1d4ed8;">@bookedCount</div>
+                        <div style="font-size: 0.85rem; color: #1e40af;">Booked</div>
+                    </div>
+                    <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 1rem; text-align: center;">
+                        <div style="font-size: 1.75rem; font-weight: 700; color: #b91c1c;">@blockedCount</div>
+                        <div style="font-size: 0.85rem; color: #991b1b;">Blocked</div>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <label>
+                        Filter by Doctor
+                        <select @bind="filterPractitionerId" @bind:after="ReloadSlotsAsync">
+                            <option value="">All Doctors</option>
+                            @foreach (var doc in practitioners)
+                            {
+                                <option value="@doc.Id">@doc.DisplayName</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Filter by Status
+                        <select @bind="filterStatus" @bind:after="ApplyClientFilter">
+                            <option value="">All Statuses</option>
+                            <option value="Available">Available</option>
+                            <option value="PartiallyBooked">Partially Booked</option>
+                            <option value="FullyBooked">Fully Booked</option>
+                            <option value="Blocked">Blocked</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+        </div>
+
+        <!-- Generated Slots Roster Table -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Roster Schedule</p>
+                    <h2>Published Doctor Consultation Slots</h2>
+                </div>
+                <span class="muted">@filteredSlots.Count slots listed</span>
+            </div>
+
+            @if (filteredSlots.Count == 0)
+            {
+                <p class="empty">No consultation slots found for the selected criteria. Select a doctor and generate slots above.</p>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Doctor</th>
+                                <th>Time Interval (UTC)</th>
+                                <th>Service</th>
+                                <th>Capacity</th>
+                                <th>Booked</th>
+                                <th>Status</th>
+                                <th>Reason / Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var slot in filteredSlots)
+                            {
+                                <tr>
+                                    <td><strong>@slot.SlotDate.ToString("dd-MMM-yyyy")</strong></td>
+                                    <td>@(slot.PractitionerName ?? "Attending Doctor")</td>
+                                    <td>@slot.StartUtc.ToString("HH:mm") - @slot.EndUtc.ToString("HH:mm") (@slot.DurationMinutes min)</td>
+                                    <td>@(slot.ServiceName ?? "General OPD")</td>
+                                    <td>@slot.MaxCapacity</td>
+                                    <td>@slot.BookedCount</td>
+                                    <td>
+                                        <span class="badge @GetBadgeClass(slot.Status)">@slot.Status</span>
+                                    </td>
+                                    <td>@(slot.BlockReason ?? "—")</td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            @if (slot.Status == "Available" || slot.Status == "PartiallyBooked")
+                                            {
+                                                <button class="secondary btn-sm" @onclick="() => PromptBlockSlot(slot)">Block</button>
+                                            }
+                                            else if (slot.Status == "Blocked")
+                                            {
+                                                <button class="primary btn-sm" @onclick="() => UnblockSlotAsync(slot)">Unblock</button>
+                                            }
+                                            @if (slot.Status != "Cancelled")
+                                            {
+                                                <button class="secondary btn-sm danger" @onclick="() => CancelSlotAsync(slot)">Cancel</button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+
+    @if (blockingSlot != null)
+    {
+        <div class="modal-overlay">
+            <div class="modal-card">
+                <h3>Block Consultation Slot</h3>
+                <p>Doctor: @(blockingSlot.PractitionerName ?? "Doctor") | Date: @blockingSlot.SlotDate.ToString("dd-MMM-yyyy") (@blockingSlot.StartUtc.ToString("HH:mm") - @blockingSlot.EndUtc.ToString("HH:mm"))</p>
+                <label style="margin-top: 1rem; display: block;">
+                    Reason for Blocking
+                    <input @bind="blockReasonInput" placeholder="e.g. Doctor in surgery, Emergency leave..." />
+                </label>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button class="secondary" @onclick="() => blockingSlot = null">Cancel</button>
+                    <button class="primary danger" @onclick="ConfirmBlockSlotAsync" disabled="@string.IsNullOrWhiteSpace(blockReasonInput)">Confirm Block</button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private string branchId = string.Empty;
+    private string selectedPractitionerId = string.Empty;
+    private string? selectedServiceId;
+    private DateOnly startDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly endDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7));
+    private string shiftStartString = "09:00";
+    private string shiftEndString = "13:00";
+    private string? breakStartString;
+    private string? breakEndString;
+    private int slotDurationMinutes = 15;
+    private int maxCapacity = 1;
+    private HashSet<DayOfWeek> selectedDays = new()
+    {
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday
+    };
+
+    private string filterPractitionerId = string.Empty;
+    private string filterStatus = string.Empty;
+
+    private List<PractitionerSummaryResponse> practitioners = new();
+    private List<ServiceResponse> services = new();
+    private List<DoctorSlotResponse> allSlots = new();
+    private List<DoctorSlotResponse> filteredSlots = new();
+
+    private DoctorSlotResponse? blockingSlot;
+    private string blockReasonInput = string.Empty;
+
+    private string? notificationMessage;
+    private bool isError;
+    private bool busy;
+
+    private bool CanManage => AdminPermissionPolicy.CanManageDoctorSlots(Session.Permissions);
+
+    private int availableCount => allSlots.Count(s => s.Status == "Available" || s.Status == "PartiallyBooked");
+    private int bookedCount => allSlots.Count(s => s.Status == "FullyBooked" || s.BookedCount > 0);
+    private int blockedCount => allSlots.Count(s => s.Status == "Blocked");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.IsAuthenticated && !string.IsNullOrWhiteSpace(Session.Session?.Scope?.BranchId))
+        {
+            branchId = Session.Session.Scope.BranchId;
+            await LoadBranchDataAsync();
+        }
+    }
+
+    private async Task LoadBranchDataAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        busy = true;
+        notificationMessage = null;
+        try
+        {
+            var rosterTask = Api.ListPractitionersAsync(branchId);
+            var catalogTask = Api.ListServicesAsync(branchId);
+            await Task.WhenAll(rosterTask, catalogTask);
+
+            practitioners = (await rosterTask).ToList();
+            services = (await catalogTask).ToList();
+
+            await ReloadSlotsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Failed to load branch data: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task ReloadSlotsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var slots = await Api.GetDoctorSlotsAsync(
+                branchId,
+                string.IsNullOrWhiteSpace(filterPractitionerId) ? null : filterPractitionerId,
+                null,
+                startDate,
+                endDate.AddDays(14));
+
+            allSlots = slots.ToList();
+            ApplyClientFilter();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Failed to load slots: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private void ApplyClientFilter()
+    {
+        if (string.IsNullOrWhiteSpace(filterStatus))
+        {
+            filteredSlots = allSlots;
+        }
+        else
+        {
+            filteredSlots = allSlots.Where(s => s.Status.Equals(filterStatus, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private void ToggleDay(DayOfWeek day, object? isChecked)
+    {
+        if (isChecked is true) selectedDays.Add(day);
+        else selectedDays.Remove(day);
+    }
+
+    private void OnStartDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var parsed)) startDate = parsed;
+    }
+
+    private void OnEndDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var parsed)) endDate = parsed;
+    }
+
+    private void OnShiftStartChanged(ChangeEventArgs e) => shiftStartString = e.Value?.ToString() ?? "09:00";
+    private void OnShiftEndChanged(ChangeEventArgs e) => shiftEndString = e.Value?.ToString() ?? "13:00";
+
+    private async Task GenerateSlotsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(selectedPractitionerId)) return;
+        busy = true;
+        notificationMessage = null;
+        isError = false;
+
+        try
+        {
+            var shiftStart = TimeOnly.Parse(shiftStartString);
+            var shiftEnd = TimeOnly.Parse(shiftEndString);
+
+            List<ShiftBreakWindow>? breaks = null;
+            if (!string.IsNullOrWhiteSpace(breakStartString) && !string.IsNullOrWhiteSpace(breakEndString))
+            {
+                breaks = new List<ShiftBreakWindow>
+                {
+                    new(TimeOnly.Parse(breakStartString), TimeOnly.Parse(breakEndString), "Shift Break")
+                };
+            }
+
+            var request = new GenerateDoctorSlotsRequest(
+                BranchId: branchId,
+                PractitionerId: selectedPractitionerId,
+                ServiceId: string.IsNullOrWhiteSpace(selectedServiceId) ? null : selectedServiceId,
+                StartDate: startDate,
+                EndDate: endDate,
+                DaysOfWeek: selectedDays.ToList(),
+                ShiftStart: shiftStart,
+                ShiftEnd: shiftEnd,
+                SlotDurationMinutes: slotDurationMinutes,
+                MaxCapacityPerSlot: maxCapacity,
+                Breaks: breaks);
+
+            var created = await Api.GenerateDoctorSlotsAsync(branchId, request);
+            notificationMessage = $"Successfully generated and published {created.Count} consultation slots!";
+            await ReloadSlotsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error generating slots: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void PromptBlockSlot(DoctorSlotResponse slot)
+    {
+        blockingSlot = slot;
+        blockReasonInput = "Doctor emergency / unavailable";
+    }
+
+    private async Task ConfirmBlockSlotAsync()
+    {
+        if (blockingSlot == null || string.IsNullOrWhiteSpace(blockReasonInput)) return;
+        busy = true;
+        try
+        {
+            await Api.BlockDoctorSlotAsync(branchId, blockingSlot.Id, new BlockDoctorSlotRequest(blockReasonInput));
+            blockingSlot = null;
+            notificationMessage = "Slot has been blocked.";
+            isError = false;
+            await ReloadSlotsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error blocking slot: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task UnblockSlotAsync(DoctorSlotResponse slot)
+    {
+        busy = true;
+        try
+        {
+            await Api.UnblockDoctorSlotAsync(branchId, slot.Id);
+            notificationMessage = "Slot has been unblocked and is available for booking.";
+            isError = false;
+            await ReloadSlotsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error unblocking slot: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task CancelSlotAsync(DoctorSlotResponse slot)
+    {
+        busy = true;
+        try
+        {
+            await Api.CancelDoctorSlotAsync(branchId, slot.Id);
+            notificationMessage = "Slot has been cancelled.";
+            isError = false;
+            await ReloadSlotsAsync();
+        }
+        catch (Exception ex)
+        {
+            notificationMessage = $"Error cancelling slot: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string GetBadgeClass(string status) => status switch
+    {
+        "Available" => "badge-success",
+        "PartiallyBooked" => "badge-info",
+        "FullyBooked" => "badge-warning",
+        "Blocked" => "badge-danger",
+        "Cancelled" => "badge-muted",
+        _ => "badge-default"
+    };
+}

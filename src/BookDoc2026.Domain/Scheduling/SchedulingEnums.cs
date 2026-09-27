@@ -28,3 +28,21 @@ public enum BookingWaitlistStatus
     Promoted = 2,
     Withdrawn = 3
 }
+
+public enum BookingSlotStatus
+{
+    Available = 1,
+    PartiallyBooked = 2,
+    FullyBooked = 3,
+    Blocked = 4,
+    Cancelled = 5
+}
+
+public enum BookingRequestStatus
+{
+    PendingApproval = 1,
+    UnderReview = 2,
+    Approved = 3,
+    Declined = 4,
+    Rescheduled = 5
+}

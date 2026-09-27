@@ -9,7 +9,14 @@
     <nav>
         @if (Session.IsAuthenticated)
         {
-            <a href="/">Home</a>
+            @if (CanManageDoctorSlots)
+            {
+                <a href="/scheduling/slots">Doctor Slots</a>
+            }
+            @if (CanReviewBookingRequests)
+            {
+                <a href="/scheduling/booking-requests">Booking Requests</a>
+            }
             @if (CanViewCommunications)
             {
                 <a href="/communications">Communications</a>
@@ -39,6 +46,8 @@
 <main class="shell">@Body</main>
 
 @code {
+    private bool CanManageDoctorSlots => AdminPermissionPolicy.CanManageDoctorSlots(Session.Permissions);
+    private bool CanReviewBookingRequests => AdminPermissionPolicy.CanReviewBookingRequests(Session.Permissions);
     private bool CanViewCommunications => AdminPermissionPolicy.CanAccessCommunications(Session.Permissions);
     private bool CanManageQueueServicePoints => AdminPermissionPolicy.CanManageQueueServicePoints(Session.Permissions);
     private bool CanAccessBilling => AdminPermissionPolicy.CanAccessBillingOversight(Session.Permissions);

@@ -1,0 +1,341 @@
+@page "/book-appointment"
+@inject BookDocApiClient Api
+@inject PortalSessionState Session
+@inject IJSRuntime JS
+
+<PageTitle>Book Doctor Appointment | BOOKDOC2026</PageTitle>
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Online Healthcare Portal</p>
+        <h1>Book Doctor Consultation</h1>
+        <p>Choose an available pre-approved consultation slot. Your booking is confirmed instantly with zero waiting for approval.</p>
+    </div>
+    <span class="badge badge-success" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Instant Confirmation</span>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="banner error">
+        @errorMessage
+    </div>
+}
+
+@if (confirmedBooking != null)
+{
+    <!-- Confirmation Screen -->
+    <section class="panel" style="max-width: 650px; margin: 2rem auto; text-align: center; border: 2px solid #10b981; background: #f0fdf4; border-radius: 12px; padding: 2.5rem;">
+        <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">✅</div>
+        <h2 style="color: #065f46; margin-bottom: 0.5rem;">Appointment Confirmed!</h2>
+        <p style="color: #047857; margin-bottom: 1.5rem;">This slot was pre-approved by the clinic. No further approval is needed.</p>
+
+        <div style="background: white; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left; display: grid; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.5rem;">
+                <span style="color: #64748b;">Booking Number:</span>
+                <strong>@confirmedBooking.BookingNumber</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.5rem;">
+                <span style="color: #64748b;">Token Code:</span>
+                <span style="font-size: 1.25rem; font-weight: 700; color: #0284c7;">@confirmedBooking.TokenCode</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.5rem;">
+                <span style="color: #64748b;">Attending Doctor:</span>
+                <strong>@confirmedBooking.PractitionerName</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.5rem;">
+                <span style="color: #64748b;">Patient Name:</span>
+                <strong>@confirmedBooking.PatientFullName</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 0.5rem;">
+                <span style="color: #64748b;">Date & Time:</span>
+                <strong>@confirmedBooking.StartUtc.ToString("dd-MMM-yyyy HH:mm") UTC</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #64748b;">Status:</span>
+                <span class="badge badge-success">@confirmedBooking.Status (Pre-Approved)</span>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 1rem;">
+            <button class="primary" @onclick="PrintSlipAsync">Print Slip</button>
+            <button class="secondary" @onclick="ResetBooking">Book Another</button>
+        </div>
+    </section>
+}
+else
+{
+    <!-- Selection & Booking Flow -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Left: Slot Finder -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step 1</p>
+                    <h2>Select Clinic & Doctor</h2>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <label>
+                    Clinic Branch ID
+                    <input @bind="branchId" placeholder="Enter branch ID..." />
+                </label>
+
+                <label>
+                    Doctor
+                    <select @bind="selectedDoctorId">
+                        <option value="">-- All Available Doctors --</option>
+                        @foreach (var doc in doctors)
+                        {
+                            <option value="@doc.Id">@doc.DisplayName</option>
+                        }
+                    </select>
+                </label>
+
+                <label>
+                    Preferred Date
+                    <input type="date" value="@selectedDate.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
+                </label>
+            </div>
+
+            <button class="primary" style="margin-top: 1rem; width: 100%;" @onclick="SearchSlotsAsync" disabled="@(busy || string.IsNullOrWhiteSpace(branchId))">
+                @(busy ? "Checking Available Slots..." : "Find Open Slots")
+            </button>
+
+            <!-- Available Slots Grid -->
+            <div style="margin-top: 2rem;">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Step 2</p>
+                        <h3>Available Slots on @selectedDate.ToString("dd-MMM-yyyy")</h3>
+                    </div>
+                    <span class="muted">@availableSlots.Count open slots</span>
+                </div>
+
+                @if (hasSearched && availableSlots.Count == 0)
+                {
+                    <div style="padding: 1.5rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; text-align: center;">
+                        <p style="color: #92400e; margin-bottom: 0.5rem;">No open consultation slots on this date.</p>
+                        <a href="/request-appointment" style="color: #b45309; font-weight: 600; text-decoration: underline;">
+                            Click here to Submit a Booking Request instead &rarr;
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+                        @foreach (var slot in availableSlots)
+                        {
+                            var isSelected = selectedSlot?.Id == slot.Id;
+                            <button type="button"
+                                    style="padding: 0.75rem 0.5rem; text-align: center; border-radius: 8px; border: 2px solid @(isSelected ? "#0284c7" : "#10b981"); background: @(isSelected ? "#e0f2fe" : "#f0fdf4"); cursor: pointer; transition: all 0.15s ease;"
+                                    @onclick="() => SelectSlot(slot)">
+                                <div style="font-weight: 700; color: #0f172a; font-size: 1rem;">
+                                    @slot.StartUtc.ToString("HH:mm")
+                                </div>
+                                <div style="font-size: 0.75rem; color: #047857; margin-top: 0.25rem;">
+                                    @slot.AvailableCapacity seat(s) left
+                                </div>
+                                <div style="font-size: 0.7rem; color: #64748b; margin-top: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    @(slot.PractitionerName ?? "Doctor")
+                                </div>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <!-- Right: Patient Booking Form -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step 3</p>
+                    <h2>Patient Details</h2>
+                </div>
+            </div>
+
+            @if (selectedSlot == null)
+            {
+                <div style="padding: 2.5rem; text-align: center; color: #94a3b8; border: 2px dashed #e2e8f0; border-radius: 8px;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👈</div>
+                    <p>Select an available time slot on the left to complete your instant booking.</p>
+                </div>
+            }
+            else
+            {
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <p style="margin: 0; color: #334155;">
+                        <strong>Selected Slot:</strong> @selectedSlot.SlotDate.ToString("dd-MMM-yyyy") at @selectedSlot.StartUtc.ToString("HH:mm") - @selectedSlot.EndUtc.ToString("HH:mm")
+                    </p>
+                    <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.9rem;">
+                        <strong>Doctor:</strong> @(selectedSlot.PractitionerName ?? "Attending Doctor") (@(selectedSlot.ServiceName ?? "General OPD"))
+                    </p>
+                </div>
+
+                <div class="form-grid">
+                    <label>
+                        Patient Full Name *
+                        <input @bind="patientFullName" placeholder="e.g. Rahul Sharma" />
+                    </label>
+
+                    <label>
+                        Phone Number *
+                        <input type="tel" @bind="patientPhone" placeholder="e.g. +91 9876543210" />
+                    </label>
+
+                    <label>
+                        Email Address (Optional)
+                        <input type="email" @bind="patientEmail" placeholder="e.g. rahul@example.com" />
+                    </label>
+
+                    <label>
+                        Chief Complaint / Notes (Optional)
+                        <input @bind="patientNotes" placeholder="e.g. Fever, routine follow-up" />
+                    </label>
+                </div>
+
+                <button class="primary" style="margin-top: 1.5rem; width: 100%; padding: 0.85rem; font-size: 1.05rem;"
+                        @onclick="BookSlotDirectAsync"
+                        disabled="@(busy || string.IsNullOrWhiteSpace(patientFullName) || string.IsNullOrWhiteSpace(patientPhone))">
+                    @(busy ? "Confirming Booking..." : "Confirm Booking (Instant - No Approval Needed)")
+                </button>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private string branchId = string.Empty;
+    private string selectedDoctorId = string.Empty;
+    private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
+
+    private List<PractitionerSummaryResponse> doctors = new();
+    private List<DoctorSlotResponse> availableSlots = new();
+    private DoctorSlotResponse? selectedSlot;
+
+    private string patientFullName = string.Empty;
+    private string patientPhone = string.Empty;
+    private string patientEmail = string.Empty;
+    private string patientNotes = string.Empty;
+
+    private DirectSlotBookingConfirmationResponse? confirmedBooking;
+    private string? errorMessage;
+    private bool busy;
+    private bool hasSearched;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.IsAuthenticated && !string.IsNullOrWhiteSpace(Session.Session?.Scope?.BranchId))
+        {
+            branchId = Session.Session.Scope.BranchId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(branchId))
+        {
+            await LoadDoctorsAsync();
+            await SearchSlotsAsync();
+        }
+    }
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var parsed))
+        {
+            selectedDate = parsed;
+        }
+    }
+
+    private async Task LoadDoctorsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var roster = await Api.ListPractitionersAsync(branchId);
+            doctors = roster.ToList();
+        }
+        catch { }
+    }
+
+    private async Task SearchSlotsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        busy = true;
+        errorMessage = null;
+        hasSearched = true;
+        selectedSlot = null;
+
+        try
+        {
+            if (doctors.Count == 0) await LoadDoctorsAsync();
+
+            var slots = await Api.GetAvailableDoctorSlotsAsync(
+                branchId,
+                string.IsNullOrWhiteSpace(selectedDoctorId) ? null : selectedDoctorId,
+                null,
+                selectedDate,
+                selectedDate);
+
+            availableSlots = slots.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load available slots: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void SelectSlot(DoctorSlotResponse slot)
+    {
+        selectedSlot = slot;
+    }
+
+    private async Task BookSlotDirectAsync()
+    {
+        if (selectedSlot == null || string.IsNullOrWhiteSpace(patientFullName) || string.IsNullOrWhiteSpace(patientPhone))
+            return;
+
+        busy = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new BookSlotDirectRequest(
+                SlotId: selectedSlot.Id,
+                PatientId: null,
+                PatientFullName: patientFullName.Trim(),
+                PatientPhone: patientPhone.Trim(),
+                PatientEmail: string.IsNullOrWhiteSpace(patientEmail) ? null : patientEmail.Trim(),
+                Notes: string.IsNullOrWhiteSpace(patientNotes) ? null : patientNotes.Trim());
+
+            confirmedBooking = await Api.BookSlotDirectAsync(branchId, request);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Booking failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void ResetBooking()
+    {
+        confirmedBooking = null;
+        selectedSlot = null;
+        patientFullName = string.Empty;
+        patientPhone = string.Empty;
+        patientEmail = string.Empty;
+        patientNotes = string.Empty;
+        _ = SearchSlotsAsync();
+    }
+
+    private async Task PrintSlipAsync()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+}

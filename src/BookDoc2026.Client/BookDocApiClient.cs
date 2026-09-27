@@ -642,4 +642,102 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         PostAsync<UnlinkBookingPackageRequest, EntitlementReservationResponse>(
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/bookings/{Uri.EscapeDataString(bookingId)}/unlink-package",
             request, cancellationToken);
+
+    public Task<IReadOnlyCollection<DoctorSlotResponse>> GenerateDoctorSlotsAsync(
+        string branchId, GenerateDoctorSlotsRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<GenerateDoctorSlotsRequest, IReadOnlyCollection<DoctorSlotResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots/generate",
+            request, cancellationToken);
+
+    public Task<IReadOnlyCollection<DoctorSlotResponse>> GetDoctorSlotsAsync(
+        string branchId, string? practitionerId = null, string? serviceId = null, DateOnly? fromDate = null, DateOnly? toDate = null, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(practitionerId)) query.Add($"practitionerId={Uri.EscapeDataString(practitionerId)}");
+        if (!string.IsNullOrWhiteSpace(serviceId)) query.Add($"serviceId={Uri.EscapeDataString(serviceId)}");
+        if (fromDate.HasValue) query.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+        if (toDate.HasValue) query.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+        var qs = query.Count > 0 ? "?" + string.Join("&", query) : string.Empty;
+        return GetAsync<IReadOnlyCollection<DoctorSlotResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots{qs}", cancellationToken);
+    }
+
+    public Task<IReadOnlyCollection<DoctorSlotResponse>> GetAvailableDoctorSlotsAsync(
+        string branchId, string? practitionerId = null, string? serviceId = null, DateOnly? fromDate = null, DateOnly? toDate = null, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(practitionerId)) query.Add($"practitionerId={Uri.EscapeDataString(practitionerId)}");
+        if (!string.IsNullOrWhiteSpace(serviceId)) query.Add($"serviceId={Uri.EscapeDataString(serviceId)}");
+        if (fromDate.HasValue) query.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+        if (toDate.HasValue) query.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+        var qs = query.Count > 0 ? "?" + string.Join("&", query) : string.Empty;
+        return GetAsync<IReadOnlyCollection<DoctorSlotResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots/available{qs}", cancellationToken);
+    }
+
+    public Task<DoctorSlotResponse> BlockDoctorSlotAsync(
+        string branchId, string slotId, BlockDoctorSlotRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<BlockDoctorSlotRequest, DoctorSlotResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots/{Uri.EscapeDataString(slotId)}/block",
+            request, cancellationToken);
+
+    public Task<DoctorSlotResponse> UnblockDoctorSlotAsync(
+        string branchId, string slotId, CancellationToken cancellationToken = default) =>
+        PostAsync<object?, DoctorSlotResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots/{Uri.EscapeDataString(slotId)}/unblock",
+            null, cancellationToken);
+
+    public Task<DoctorSlotResponse> CancelDoctorSlotAsync(
+        string branchId, string slotId, CancellationToken cancellationToken = default) =>
+        PostAsync<object?, DoctorSlotResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots/{Uri.EscapeDataString(slotId)}/cancel",
+            null, cancellationToken);
+
+    public Task<DirectSlotBookingConfirmationResponse> BookSlotDirectAsync(
+        string branchId, BookSlotDirectRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<BookSlotDirectRequest, DirectSlotBookingConfirmationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/doctor-slots/book-direct",
+            request, cancellationToken);
+
+    public Task<BookingRequestResponse> SubmitBookingRequestAsync(
+        string branchId, SubmitBookingRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<SubmitBookingRequest, BookingRequestResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests",
+            request, cancellationToken);
+
+    public Task<IReadOnlyCollection<BookingRequestResponse>> GetBookingRequestsAsync(
+        string branchId, string? status = null, DateOnly? fromDate = null, DateOnly? toDate = null, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(status)) query.Add($"status={Uri.EscapeDataString(status)}");
+        if (fromDate.HasValue) query.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+        if (toDate.HasValue) query.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+        var qs = query.Count > 0 ? "?" + string.Join("&", query) : string.Empty;
+        return GetAsync<IReadOnlyCollection<BookingRequestResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests{qs}", cancellationToken);
+    }
+
+    public Task<BookingRequestResponse> GetBookingRequestByIdAsync(
+        string branchId, string requestId, CancellationToken cancellationToken = default) =>
+        GetAsync<BookingRequestResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests/{Uri.EscapeDataString(requestId)}",
+            cancellationToken);
+
+    public Task<BookingRequestResponse> ApproveBookingRequestAsync(
+        string branchId, string requestId, ApproveBookingRequest command, CancellationToken cancellationToken = default) =>
+        PostAsync<ApproveBookingRequest, BookingRequestResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests/{Uri.EscapeDataString(requestId)}/approve",
+            command, cancellationToken);
+
+    public Task<BookingRequestResponse> DeclineBookingRequestAsync(
+        string branchId, string requestId, DeclineBookingRequest command, CancellationToken cancellationToken = default) =>
+        PostAsync<DeclineBookingRequest, BookingRequestResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests/{Uri.EscapeDataString(requestId)}/decline",
+            command, cancellationToken);
+
+    public Task<BookingRequestResponse> RescheduleBookingRequestAsync(
+        string branchId, string requestId, RescheduleBookingRequestNotice command, CancellationToken cancellationToken = default) =>
+        PostAsync<RescheduleBookingRequestNotice, BookingRequestResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests/{Uri.EscapeDataString(requestId)}/reschedule",
+            command, cancellationToken);
 }

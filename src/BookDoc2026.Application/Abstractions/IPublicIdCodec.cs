@@ -61,7 +61,9 @@ public enum PublicIdKind
     CommunicationPreferenceEvent,
     ProviderCallbackInbox,
     MessageDeliveryStatusEvent,
-    PatientRelation
+    PatientRelation,
+    BookingSlot,
+    BookingRequest
 }
 
 public interface IPublicIdCodec

@@ -80,5 +80,13 @@ public interface ISchedulingRepository
         OutboxMessage outboxMessage,
         DateTimeOffset now,
         CancellationToken cancellationToken);
+    Task AddSlotsAsync(IEnumerable<BookingSlot> slots, CancellationToken cancellationToken);
+    Task<BookingSlot?> GetSlotAsync(long branchId, long slotId, bool tracked, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<BookingSlot>> ListSlotsAsync(long branchId, long? practitionerId, long? serviceId, DateOnly? fromDate, DateOnly? toDate, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<BookingSlot>> ListAvailableSlotsAsync(long branchId, long? practitionerId, long? serviceId, DateOnly? fromDate, DateOnly? toDate, CancellationToken cancellationToken);
+    Task<bool> SlotOverlapsAsync(long branchId, long practitionerId, DateTimeOffset startUtc, DateTimeOffset endUtc, CancellationToken cancellationToken);
+    Task AddBookingRequestAsync(BookingRequest request, CancellationToken cancellationToken);
+    Task<BookingRequest?> GetBookingRequestAsync(long branchId, long requestId, bool tracked, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<BookingRequest>> ListBookingRequestsAsync(long branchId, BookingRequestStatus? status, DateOnly? fromDate, DateOnly? toDate, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

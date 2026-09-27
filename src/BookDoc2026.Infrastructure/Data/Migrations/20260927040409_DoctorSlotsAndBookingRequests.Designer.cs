@@ -4,6 +4,7 @@ using BookDoc2026.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookDoc2026.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(BookDocDbContext))]
-    partial class BookDocDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260927040409_DoctorSlotsAndBookingRequests")]
+    partial class DoctorSlotsAndBookingRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

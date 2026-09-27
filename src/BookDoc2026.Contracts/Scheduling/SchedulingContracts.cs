@@ -106,3 +106,105 @@ public sealed record BookingResponse(
     IReadOnlyCollection<BookingResourceResponse> Resources,
     bool NotificationQueued,
     bool IsReplay);
+
+public sealed record ShiftBreakWindow(TimeOnly StartTime, TimeOnly EndTime, string? Description = null);
+
+public sealed record GenerateDoctorSlotsRequest(
+    string BranchId,
+    string PractitionerId,
+    string? ServiceId,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    IReadOnlyCollection<DayOfWeek> DaysOfWeek,
+    TimeOnly ShiftStart,
+    TimeOnly ShiftEnd,
+    int SlotDurationMinutes,
+    int MaxCapacityPerSlot,
+    IReadOnlyCollection<ShiftBreakWindow>? Breaks = null);
+
+public sealed record DoctorSlotResponse(
+    string Id,
+    string BranchId,
+    string PractitionerId,
+    string? PractitionerName,
+    string? ServiceId,
+    string? ServiceName,
+    DateOnly SlotDate,
+    DateTimeOffset StartUtc,
+    DateTimeOffset EndUtc,
+    int DurationMinutes,
+    int MaxCapacity,
+    int BookedCount,
+    int AvailableCapacity,
+    string Status,
+    string? BlockReason,
+    long Version);
+
+public sealed record BlockDoctorSlotRequest(
+    string Reason);
+
+public sealed record BookSlotDirectRequest(
+    string SlotId,
+    string? PatientId,
+    string PatientFullName,
+    string PatientPhone,
+    string? PatientEmail,
+    string? Notes = null);
+
+public sealed record DirectSlotBookingConfirmationResponse(
+    string BookingId,
+    string BookingNumber,
+    string SlotId,
+    string PractitionerName,
+    DateTimeOffset StartUtc,
+    DateTimeOffset EndUtc,
+    string PatientFullName,
+    string Status,
+    string TokenCode);
+
+public sealed record SubmitBookingRequest(
+    string BranchId,
+    string? PatientId,
+    string PatientFullName,
+    string PatientPhone,
+    string? PatientEmail,
+    string? PreferredPractitionerId,
+    string? ServiceId,
+    DateOnly PreferredDate,
+    string PreferredTimeSlot,
+    string ReasonForVisit);
+
+public sealed record BookingRequestResponse(
+    string Id,
+    string BranchId,
+    string? PatientId,
+    string PatientFullName,
+    string PatientPhone,
+    string? PatientEmail,
+    string? PreferredPractitionerId,
+    string? PreferredPractitionerName,
+    string? ServiceId,
+    string? ServiceName,
+    DateOnly PreferredDate,
+    string PreferredTimeSlot,
+    string ReasonForVisit,
+    string Status,
+    string? AssignedPractitionerId,
+    string? AssignedPractitionerName,
+    string? ConfirmedBookingId,
+    string? ReviewNotes,
+    DateTimeOffset? ReviewedUtc,
+    string? ReviewedByStaffId,
+    DateTimeOffset CreatedUtc,
+    long Version);
+
+public sealed record ApproveBookingRequest(
+    string? AssignedPractitionerId = null,
+    string? ConfirmedBookingId = null,
+    string? Notes = null);
+
+public sealed record DeclineBookingRequest(
+    string Reason);
+
+public sealed record RescheduleBookingRequestNotice(
+    string OfferedSlotNotes);

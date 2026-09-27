@@ -513,6 +513,85 @@ public sealed class SchedulingRepository(BookDocDbContext dbContext) : IScheduli
         });
     }
 
+        public Task AddSlotsAsync(IEnumerable<BookingSlot> slots, CancellationToken cancellationToken) =>
+        dbContext.BookingSlots.AddRangeAsync(slots, cancellationToken);
+
+    public Task<BookingSlot?> GetSlotAsync(long branchId, long slotId, bool tracked, CancellationToken cancellationToken)
+    {
+        var query = tracked ? dbContext.BookingSlots : dbContext.BookingSlots.AsNoTracking();
+        return query.SingleOrDefaultAsync(x => x.BranchId == branchId && x.Id == slotId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<BookingSlot>> ListSlotsAsync(
+        long branchId,
+        long? practitionerId,
+        long? serviceId,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.BookingSlots.AsNoTracking().Where(x => x.BranchId == branchId);
+        if (practitionerId.HasValue) query = query.Where(x => x.PractitionerId == practitionerId.Value);
+        if (serviceId.HasValue) query = query.Where(x => x.ServiceId == serviceId.Value);
+        if (fromDate.HasValue) query = query.Where(x => x.SlotDate >= fromDate.Value);
+        if (toDate.HasValue) query = query.Where(x => x.SlotDate <= toDate.Value);
+
+        return await query.OrderBy(x => x.SlotDate).ThenBy(x => x.StartUtc).ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<BookingSlot>> ListAvailableSlotsAsync(
+        long branchId,
+        long? practitionerId,
+        long? serviceId,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.BookingSlots.AsNoTracking().Where(x => x.BranchId == branchId &&
+            (x.Status == BookingSlotStatus.Available || x.Status == BookingSlotStatus.PartiallyBooked) &&
+            x.BookedCount < x.MaxCapacity);
+
+        if (practitionerId.HasValue) query = query.Where(x => x.PractitionerId == practitionerId.Value);
+        if (serviceId.HasValue) query = query.Where(x => x.ServiceId == serviceId.Value);
+        if (fromDate.HasValue) query = query.Where(x => x.SlotDate >= fromDate.Value);
+        if (toDate.HasValue) query = query.Where(x => x.SlotDate <= toDate.Value);
+
+        return await query.OrderBy(x => x.SlotDate).ThenBy(x => x.StartUtc).ToListAsync(cancellationToken);
+    }
+
+    public Task<bool> SlotOverlapsAsync(long branchId, long practitionerId, DateTimeOffset startUtc, DateTimeOffset endUtc, CancellationToken cancellationToken) =>
+        dbContext.BookingSlots.AnyAsync(x =>
+            x.BranchId == branchId &&
+            x.PractitionerId == practitionerId &&
+            x.Status != BookingSlotStatus.Cancelled &&
+            x.StartUtc < endUtc &&
+            x.EndUtc > startUtc,
+            cancellationToken);
+
+    public Task AddBookingRequestAsync(BookingRequest request, CancellationToken cancellationToken) =>
+        dbContext.BookingRequests.AddAsync(request, cancellationToken).AsTask();
+
+    public Task<BookingRequest?> GetBookingRequestAsync(long branchId, long requestId, bool tracked, CancellationToken cancellationToken)
+    {
+        var query = tracked ? dbContext.BookingRequests : dbContext.BookingRequests.AsNoTracking();
+        return query.SingleOrDefaultAsync(x => x.BranchId == branchId && x.Id == requestId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<BookingRequest>> ListBookingRequestsAsync(
+        long branchId,
+        BookingRequestStatus? status,
+        DateOnly? fromDate,
+        DateOnly? toDate,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.BookingRequests.AsNoTracking().Where(x => x.BranchId == branchId);
+        if (status.HasValue) query = query.Where(x => x.Status == status.Value);
+        if (fromDate.HasValue) query = query.Where(x => x.PreferredDate >= fromDate.Value);
+        if (toDate.HasValue) query = query.Where(x => x.PreferredDate <= toDate.Value);
+
+        return await query.OrderByDescending(x => x.CreatedUtc).ToListAsync(cancellationToken);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try { await dbContext.SaveChangesAsync(cancellationToken); }

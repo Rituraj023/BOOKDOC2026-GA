@@ -24,6 +24,10 @@ public static class ApplicationRegistration
         services.AddScoped<CatalogService>();
         services.AddScoped<StakeholderService>();
         services.AddScoped<SchedulingService>();
+        services.AddScoped<SlotManagementService>();
+        services.AddScoped<ISlotManagementService>(sp => sp.GetRequiredService<SlotManagementService>());
+        services.AddScoped<BookingRequestService>();
+        services.AddScoped<IBookingRequestService>(sp => sp.GetRequiredService<BookingRequestService>());
         services.AddScoped<QueueService>();
         services.AddScoped<CommunicationService>();
         services.AddScoped<ContractService>();
