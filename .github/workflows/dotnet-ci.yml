@@ -1,0 +1,32 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore BookDoc2026-GA.slnx
+
+    - name: Build Solution
+      run: dotnet build BookDoc2026-GA.slnx --no-restore --configuration Release
+
+    - name: Run Unit Tests
+      run: dotnet test tests/BookDoc2026.UnitTests/BookDoc2026.UnitTests.csproj --no-build --configuration Release
+
+    - name: Run Architecture Tests
+      run: dotnet test tests/BookDoc2026.ArchitectureTests/BookDoc2026.ArchitectureTests.csproj --no-build --configuration Release
