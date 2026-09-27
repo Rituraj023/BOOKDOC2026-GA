@@ -13,9 +13,9 @@ public sealed record EncounterContentRequest(
     string? BodySite,
     string? LateralityCode);
 
-public sealed record StartEncounterRequest(string BookingId, EncounterContentRequest Content);
+public sealed record StartEncounterRequest(string BookingId, EncounterContentRequest Content, string? SupervisingPractitionerId = null);
 
-public sealed record ReviseEncounterDraftRequest(long ExpectedVersion, EncounterContentRequest Content);
+public sealed record ReviseEncounterDraftRequest(long ExpectedVersion, EncounterContentRequest Content, string? SupervisingPractitionerId = null);
 
 public sealed record SignEncounterRequest(long ExpectedVersion);
 
@@ -43,6 +43,7 @@ public sealed record EncounterResponse(
     int LatestRevisionNumber,
     DateTimeOffset? SignedUtc,
     string? SignedByActorId,
+    string? SupervisingPractitionerId,
     long Version,
     IReadOnlyCollection<EncounterRevisionResponse> Revisions);
 

@@ -262,4 +262,115 @@ public sealed class PatientService(
         var separator = value.IndexOf('@', StringComparison.Ordinal);
         return separator <= 0 ? "***" : $"{value[0]}***{value[separator..]}";
     }
+
+    public async Task<IReadOnlyCollection<PatientRelationResponse>> GetFamilyMembersAsync(
+        long branchId,
+        string patientId,
+        CancellationToken cancellationToken)
+    {
+        RequireBranchPermission(FoundationPermissions.PatientsSearch, branchId);
+        var decodedPatientId = publicIds.Decode(PublicIdKind.Patient, patientId, actor.TenantId);
+        var details = await repository.GetRelationsAsync(decodedPatientId, cancellationToken);
+        return details.Select(MapRelation).ToArray();
+    }
+
+    public async Task<PatientRelationResponse> AddFamilyMemberAsync(
+        long branchId,
+        string patientId,
+        AddPatientRelationRequest request,
+        CancellationToken cancellationToken)
+    {
+        RequireBranchPermission(FoundationPermissions.PatientsRegister, branchId);
+        var branch = await repository.GetBranchAsync(branchId, cancellationToken)
+            ?? throw new NotFoundException("Branch was not found in the current tenant scope.");
+        var decodedPatientId = publicIds.Decode(PublicIdKind.Patient, patientId, branch.TenantId);
+        var decodedRelatedPatientId = publicIds.Decode(PublicIdKind.Patient, request.RelatedPatientId, branch.TenantId);
+
+        if (decodedPatientId == decodedRelatedPatientId)
+            throw new DomainRuleException("A patient cannot be related to themselves.");
+
+        if (await repository.RelationExistsAsync(decodedPatientId, decodedRelatedPatientId, cancellationToken))
+            throw new DomainRuleException("This relationship already exists.");
+
+        if (!Enum.TryParse<PatientRelationshipType>(request.RelationshipType, true, out var relType))
+            throw new DomainRuleException("Invalid relationship type.");
+
+        var now = clock.UtcNow;
+        var relation = PatientRelation.Create(
+            branch.TenantId,
+            decodedPatientId,
+            decodedRelatedPatientId,
+            relType,
+            request.IsEmergencyContact,
+            request.IsGuardian,
+            request.Notes,
+            now);
+
+        await repository.AddRelationAsync(relation, cancellationToken);
+        var audit = AuditEvent.Record(
+            branch.TenantId,
+            branchId,
+            actor.ActorId,
+            "Patient.RelationAdded",
+            nameof(PatientRelation),
+            relation.Id,
+            JsonSerializer.Serialize(new { PatientId = decodedPatientId, RelatedPatientId = decodedRelatedPatientId, relType }),
+            correlationContext.CorrelationId,
+            now);
+        await repository.AddAuditEventAsync(audit, cancellationToken);
+        await repository.SaveChangesAsync(cancellationToken);
+
+        var relatedAggregate = await repository.GetAsync(decodedRelatedPatientId, cancellationToken)
+            ?? throw new NotFoundException("Related patient was not found.");
+        return MapRelation(new PatientRelationDetail(relation, relatedAggregate.Patient, relatedAggregate.Stakeholder));
+    }
+
+    public async Task RemoveFamilyMemberAsync(
+        long branchId,
+        string relationId,
+        CancellationToken cancellationToken)
+    {
+        RequireBranchPermission(FoundationPermissions.PatientsRegister, branchId);
+        var branch = await repository.GetBranchAsync(branchId, cancellationToken)
+            ?? throw new NotFoundException("Branch was not found in the current tenant scope.");
+        var decodedRelationId = publicIds.Decode(PublicIdKind.PatientRelation, relationId, branch.TenantId);
+        var relation = await repository.GetRelationByIdAsync(decodedRelationId, cancellationToken)
+            ?? throw new NotFoundException("Patient relationship was not found.");
+
+        await repository.RemoveRelationAsync(relation, cancellationToken);
+        var audit = AuditEvent.Record(
+            branch.TenantId,
+            branchId,
+            actor.ActorId,
+            "Patient.RelationRemoved",
+            nameof(PatientRelation),
+            relation.Id,
+            JsonSerializer.Serialize(new { relation.PatientId, relation.RelatedPatientId }),
+            correlationContext.CorrelationId,
+            clock.UtcNow);
+        await repository.AddAuditEventAsync(audit, cancellationToken);
+        await repository.SaveChangesAsync(cancellationToken);
+    }
+
+    private PatientRelationResponse MapRelation(PatientRelationDetail detail)
+    {
+        var person = detail.RelatedStakeholder.Person;
+        var mobile = detail.RelatedStakeholder.Contacts
+            .FirstOrDefault(contact => contact.Type == ContactPointType.Mobile && contact.IsPrimary)
+            ?? detail.RelatedStakeholder.Contacts.FirstOrDefault(contact => contact.Type == ContactPointType.Mobile);
+
+        return new PatientRelationResponse(
+            publicIds.Encode(PublicIdKind.PatientRelation, detail.Relation.Id, detail.Relation.TenantId),
+            publicIds.Encode(PublicIdKind.Patient, detail.Relation.PatientId, detail.Relation.TenantId),
+            publicIds.Encode(PublicIdKind.Patient, detail.Relation.RelatedPatientId, detail.Relation.TenantId),
+            detail.RelatedPatient.PatientNumber,
+            person?.DisplayName ?? "Unknown",
+            person?.DateOfBirth?.Year,
+            mobile is null ? null : MaskMobile(mobile.NormalizedValue),
+            detail.Relation.RelationshipType.ToString(),
+            detail.Relation.IsEmergencyContact,
+            detail.Relation.IsGuardian,
+            detail.Relation.Notes,
+            detail.Relation.Version);
+    }
 }

@@ -179,3 +179,26 @@ internal sealed class PatientConfiguration : IEntityTypeConfiguration<Patient>
             .HasPrincipalKey<Stakeholder>(entity => new { entity.TenantId, entity.Id });
     }
 }
+internal sealed class PatientRelationConfiguration : IEntityTypeConfiguration<PatientRelation>
+{
+    public void Configure(EntityTypeBuilder<PatientRelation> builder)
+    {
+        builder.ToTable("patient_relation", "patient", table =>
+            table.HasCheckConstraint("ck_patient_relation_not_self", "[patient_id] <> [related_patient_id]"));
+        builder.HasKey(entity => entity.Id);
+        builder.Property(entity => entity.Notes).HasMaxLength(500);
+        builder.Property(entity => entity.Version).IsConcurrencyToken();
+        builder.HasIndex(entity => new { entity.TenantId, entity.PatientId, entity.RelatedPatientId }).IsUnique();
+        builder.HasIndex(entity => new { entity.TenantId, entity.RelatedPatientId });
+        builder.HasOne<Patient>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.PatientId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Patient>()
+            .WithMany()
+            .HasForeignKey(entity => new { entity.TenantId, entity.RelatedPatientId })
+            .HasPrincipalKey(entity => new { entity.TenantId, entity.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

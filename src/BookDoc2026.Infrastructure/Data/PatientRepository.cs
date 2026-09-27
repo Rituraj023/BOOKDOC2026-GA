@@ -199,4 +199,38 @@ public sealed class PatientRepository(BookDocDbContext dbContext) : IPatientRepo
             .ToListAsync(cancellationToken);
         return new StakeholderAggregate(stakeholder, person, corporate, contacts, identifiers, addresses, documents);
     }
+
+    public async Task<IReadOnlyCollection<PatientRelationDetail>> GetRelationsAsync(long patientId, CancellationToken cancellationToken)
+    {
+        var relations = await dbContext.PatientRelations
+            .Where(r => r.PatientId == patientId)
+            .ToListAsync(cancellationToken);
+
+        var details = new List<PatientRelationDetail>(relations.Count);
+        foreach (var rel in relations)
+        {
+            var relatedPatient = await dbContext.Patients.SingleOrDefaultAsync(p => p.Id == rel.RelatedPatientId, cancellationToken);
+            if (relatedPatient is not null)
+            {
+                var stakeholder = await LoadStakeholderAsync(relatedPatient.StakeholderId, cancellationToken);
+                details.Add(new PatientRelationDetail(rel, relatedPatient, stakeholder));
+            }
+        }
+        return details;
+    }
+
+    public Task<PatientRelation?> GetRelationByIdAsync(long relationId, CancellationToken cancellationToken) =>
+        dbContext.PatientRelations.SingleOrDefaultAsync(r => r.Id == relationId, cancellationToken);
+
+    public Task<bool> RelationExistsAsync(long patientId, long relatedPatientId, CancellationToken cancellationToken) =>
+        dbContext.PatientRelations.AnyAsync(r => r.PatientId == patientId && r.RelatedPatientId == relatedPatientId, cancellationToken);
+
+    public async Task AddRelationAsync(PatientRelation relation, CancellationToken cancellationToken) =>
+        await dbContext.PatientRelations.AddAsync(relation, cancellationToken);
+
+    public Task RemoveRelationAsync(PatientRelation relation, CancellationToken cancellationToken)
+    {
+        dbContext.PatientRelations.Remove(relation);
+        return Task.CompletedTask;
+    }
 }

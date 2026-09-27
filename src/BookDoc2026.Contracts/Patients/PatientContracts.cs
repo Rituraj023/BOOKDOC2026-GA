@@ -44,3 +44,30 @@ public sealed record PatientSearchResponse(
     string? MaskedMobile,
     string? MaskedEmail,
     string Status);
+public sealed record AddPatientRelationRequest(
+    string RelatedPatientId,
+    string RelationshipType,
+    bool IsEmergencyContact,
+    bool IsGuardian,
+    string? Notes);
+
+public sealed record UpdatePatientRelationRequest(
+    long ExpectedVersion,
+    string RelationshipType,
+    bool IsEmergencyContact,
+    bool IsGuardian,
+    string? Notes);
+
+public sealed record PatientRelationResponse(
+    string Id,
+    string PatientId,
+    string RelatedPatientId,
+    string RelatedPatientNumber,
+    string RelatedPatientDisplayName,
+    int? RelatedPatientBirthYear,
+    string? RelatedPatientMaskedMobile,
+    string RelationshipType,
+    bool IsEmergencyContact,
+    bool IsGuardian,
+    string? Notes,
+    long Version);

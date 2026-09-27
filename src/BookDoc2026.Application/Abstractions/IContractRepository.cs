@@ -24,7 +24,10 @@ public interface IContractRepository
     Task AddContractAsync(ContractAgreement agreement, IReadOnlyCollection<ContractEntitlement> entitlements,
         AuditEvent auditEvent, CancellationToken cancellationToken);
     Task<ContractAggregate?> GetContractAsync(long branchId, long contractId, bool tracked, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ContractAggregate>> GetPatientActiveContractsAsync(long branchId, long patientId, CancellationToken cancellationToken);
     Task<EntitlementReservationAggregate?> GetReservationAsync(long branchId, long reservationId, bool tracked,
+        CancellationToken cancellationToken);
+    Task<EntitlementReservationAggregate?> GetActiveReservationForBookingAsync(long branchId, long bookingId, bool tracked,
         CancellationToken cancellationToken);
     Task<EntitlementReservationAggregate?> GetReservationByRequestAsync(long branchId, Guid requestId,
         CancellationToken cancellationToken);

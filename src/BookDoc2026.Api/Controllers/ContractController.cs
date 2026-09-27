@@ -82,4 +82,44 @@ public sealed class ContractController(ContractService service, HttpPublicIdDeco
             ids.Tenant(PublicIdKind.EntitlementReservation, reservationId), cancellationToken);
         return Ok(new ApiEnvelope<EntitlementReservationResponse>(response, HttpContext.TraceIdentifier));
     }
+
+    [Authorize(Policy = FoundationPermissions.ContractsView)]
+    [HttpGet("patients/{patientId}/active-packages")]
+    public async Task<ActionResult<ApiEnvelope<IReadOnlyCollection<PatientPackageSummaryResponse>>>> GetPatientActivePackages(
+        string branchId, string patientId, [FromQuery] string? serviceId, CancellationToken cancellationToken)
+    {
+        var response = await service.GetPatientActivePackagesAsync(
+            ids.Tenant(PublicIdKind.Branch, branchId), patientId, serviceId, cancellationToken);
+        return Ok(new ApiEnvelope<IReadOnlyCollection<PatientPackageSummaryResponse>>(response, HttpContext.TraceIdentifier));
+    }
+
+    [Authorize(Policy = FoundationPermissions.ContractsView)]
+    [HttpGet("bookings/{bookingId}/package-status")]
+    public async Task<ActionResult<ApiEnvelope<BookingPackageStatusResponse>>> GetBookingPackageStatus(
+        string branchId, string bookingId, CancellationToken cancellationToken)
+    {
+        var response = await service.GetBookingPackageStatusAsync(
+            ids.Tenant(PublicIdKind.Branch, branchId), bookingId, cancellationToken);
+        return Ok(new ApiEnvelope<BookingPackageStatusResponse>(response, HttpContext.TraceIdentifier));
+    }
+
+    [Authorize(Policy = FoundationPermissions.ContractEntitlementsReserve)]
+    [HttpPost("bookings/{bookingId}/link-package")]
+    public async Task<ActionResult<ApiEnvelope<EntitlementReservationResponse>>> LinkBookingPackage(
+        string branchId, string bookingId, LinkBookingPackageRequest request, CancellationToken cancellationToken)
+    {
+        var response = await service.LinkBookingToPackageAsync(
+            ids.Tenant(PublicIdKind.Branch, branchId), bookingId, request, cancellationToken);
+        return Ok(new ApiEnvelope<EntitlementReservationResponse>(response, HttpContext.TraceIdentifier));
+    }
+
+    [Authorize(Policy = FoundationPermissions.ContractEntitlementsRelease)]
+    [HttpPost("bookings/{bookingId}/unlink-package")]
+    public async Task<ActionResult<ApiEnvelope<EntitlementReservationResponse>>> UnlinkBookingPackage(
+        string branchId, string bookingId, UnlinkBookingPackageRequest request, CancellationToken cancellationToken)
+    {
+        var response = await service.UnlinkBookingFromPackageAsync(
+            ids.Tenant(PublicIdKind.Branch, branchId), bookingId, request, cancellationToken);
+        return Ok(new ApiEnvelope<EntitlementReservationResponse>(response, HttpContext.TraceIdentifier));
+    }
 }

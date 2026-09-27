@@ -21,3 +21,10 @@ public enum PractitionerAssignmentStatus
     Suspended = 2,
     Ended = 3
 }
+
+public static class PractitionerRoleCodes
+{
+    public const string Attending = "Attending";
+    public const string Supervising = "Supervising";
+    public const string Assisting = "Assisting";
+}

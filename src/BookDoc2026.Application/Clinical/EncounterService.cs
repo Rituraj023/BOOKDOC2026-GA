@@ -26,7 +26,8 @@ public sealed class EncounterService(
         if (await repository.EncounterExistsForBookingAsync(branchId, bookingId, cancellationToken))
             throw new DomainRuleException("An encounter already exists for this booking.");
         var now = clock.UtcNow;
-        var (encounter, revision) = ClinicalEncounter.Start(booking, Map(request.Content), actor.ActorId, now);
+        var supervising = publicIds.DecodeOptional(PublicIdKind.Practitioner, request.SupervisingPractitionerId, branch.TenantId);
+        var (encounter, revision) = ClinicalEncounter.Start(booking, Map(request.Content), actor.ActorId, supervising, now);
         var audit = Audit(branch, encounter, revision, "Encounter.Started", now);
         await repository.AddEncounterAsync(encounter, revision, audit, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
@@ -58,8 +59,16 @@ public sealed class EncounterService(
     public Task<EncounterResponse> ReviseDraftAsync(long branchId, long encounterId,
         ReviseEncounterDraftRequest request, CancellationToken cancellationToken) =>
         ChangeAsync(branchId, encounterId, FoundationPermissions.EncounterDraftsManage, "Encounter.DraftRevised",
-            (aggregate, now) => aggregate.Encounter.ReviseDraft(aggregate.Latest, Map(request.Content),
-                request.ExpectedVersion, actor.ActorId, now), false, cancellationToken);
+            (aggregate, now) =>
+            {
+                if (!string.IsNullOrWhiteSpace(request.SupervisingPractitionerId))
+                {
+                    var supervising = publicIds.Decode(PublicIdKind.Practitioner, request.SupervisingPractitionerId, aggregate.Encounter.TenantId);
+                    aggregate.Encounter.AssignSupervisingPractitioner(supervising, now);
+                }
+                return aggregate.Encounter.ReviseDraft(aggregate.Latest, Map(request.Content),
+                    request.ExpectedVersion, actor.ActorId, now);
+            }, false, cancellationToken);
 
     public Task<EncounterResponse> SignAsync(long branchId, long encounterId, SignEncounterRequest request,
         CancellationToken cancellationToken) =>
@@ -127,6 +136,7 @@ public sealed class EncounterService(
         aggregate.Encounter.SignedByActorId.HasValue
             ? publicIds.Encode(PublicIdKind.IdentitySubject, aggregate.Encounter.SignedByActorId.Value)
             : null,
+        publicIds.EncodeOptional(PublicIdKind.Practitioner, aggregate.Encounter.SupervisingPractitionerId, aggregate.Encounter.TenantId),
         aggregate.Encounter.Version,
         aggregate.Revisions.OrderBy(item => item.RevisionNumber).Select(item => Map(item, aggregate.Encounter.TenantId)).ToArray());
 

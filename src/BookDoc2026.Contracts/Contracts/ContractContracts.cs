@@ -77,3 +77,38 @@ public sealed record EntitlementReservationResponse(
     long Version,
     ContractEntitlementResponse Entitlement,
     bool IsReplay);
+public sealed record PatientPackageSummaryResponse(
+    string ContractId,
+    string ContractNumber,
+    string ContractTypeCode,
+    DateOnly ValidTo,
+    string EntitlementId,
+    string ServiceId,
+    string? ResourceCategoryId,
+    int AvailableUnits,
+    int TotalUnits,
+    int ConsumedUnits,
+    decimal UnitPrice,
+    string Currency);
+
+public sealed record BookingPackageStatusResponse(
+    string BookingId,
+    bool IsLinkedToPackage,
+    string? ReservationId,
+    string? ContractId,
+    string? ContractNumber,
+    string? EntitlementId,
+    int? Units,
+    string? Status);
+
+public sealed record LinkBookingPackageRequest(
+    Guid RequestId,
+    string ContractId,
+    string EntitlementId,
+    int Units,
+    long ExpectedEntitlementVersion);
+
+public sealed record UnlinkBookingPackageRequest(
+    long ExpectedReservationVersion,
+    long ExpectedEntitlementVersion,
+    string Reason);

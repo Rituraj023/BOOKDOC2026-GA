@@ -61,4 +61,39 @@ public sealed class PatientsController(PatientService patientService, HttpPublic
             ids.Tenant(PublicIdKind.Patient, patientId), request, cancellationToken);
         return Ok(new ApiEnvelope<PatientResponse>(response, HttpContext.TraceIdentifier));
     }
+
+    [Authorize(Policy = FoundationPermissions.PatientsSearch)]
+    [HttpGet("{patientId}/relations")]
+    public async Task<ActionResult<ApiEnvelope<IReadOnlyCollection<PatientRelationResponse>>>> GetRelations(
+        string branchId,
+        string patientId,
+        CancellationToken cancellationToken)
+    {
+        var response = await patientService.GetFamilyMembersAsync(ids.Tenant(PublicIdKind.Branch, branchId), patientId, cancellationToken);
+        return Ok(new ApiEnvelope<IReadOnlyCollection<PatientRelationResponse>>(response, HttpContext.TraceIdentifier));
+    }
+
+    [Authorize(Policy = FoundationPermissions.PatientsRegister)]
+    [HttpPost("{patientId}/relations")]
+    public async Task<ActionResult<ApiEnvelope<PatientRelationResponse>>> AddRelation(
+        string branchId,
+        string patientId,
+        AddPatientRelationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await patientService.AddFamilyMemberAsync(ids.Tenant(PublicIdKind.Branch, branchId), patientId, request, cancellationToken);
+        return Created($"/api/v1/branches/{branchId}/patients/{patientId}/relations/{response.Id}",
+            new ApiEnvelope<PatientRelationResponse>(response, HttpContext.TraceIdentifier));
+    }
+
+    [Authorize(Policy = FoundationPermissions.PatientsRegister)]
+    [HttpDelete("relations/{relationId}")]
+    public async Task<IActionResult> RemoveRelation(
+        string branchId,
+        string relationId,
+        CancellationToken cancellationToken)
+    {
+        await patientService.RemoveFamilyMemberAsync(ids.Tenant(PublicIdKind.Branch, branchId), relationId, cancellationToken);
+        return NoContent();
+    }
 }

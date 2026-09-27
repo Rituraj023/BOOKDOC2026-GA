@@ -181,4 +181,94 @@ public sealed class ContractService(
 
     private static string Hash(object value) => Convert.ToHexString(SHA256.HashData(
         Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value))));
+
+    public async Task<IReadOnlyCollection<PatientPackageSummaryResponse>> GetPatientActivePackagesAsync(
+        long branchId, string patientId, string? serviceId, CancellationToken cancellationToken)
+    {
+        var branch = await RequireBranchAsync(FoundationPermissions.ContractsView, branchId, cancellationToken);
+        var decodedPatientId = publicIds.Decode(PublicIdKind.Patient, patientId, branch.TenantId);
+        long? decodedServiceId = string.IsNullOrWhiteSpace(serviceId) ? null : publicIds.Decode(PublicIdKind.ClinicalService, serviceId, branch.TenantId);
+
+        var contracts = await repository.GetPatientActiveContractsAsync(branchId, decodedPatientId, cancellationToken);
+        var results = new List<PatientPackageSummaryResponse>();
+        var nowLocal = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(branch.TimeZoneId)).DateTime);
+
+        foreach (var c in contracts)
+        {
+            if (c.Agreement.ValidFrom > nowLocal || c.Agreement.ValidTo < nowLocal) continue;
+            foreach (var ent in c.Entitlements)
+            {
+                if (decodedServiceId.HasValue && ent.ServiceId != decodedServiceId.Value) continue;
+                if (ent.AvailableUnits <= 0) continue;
+
+                results.Add(new PatientPackageSummaryResponse(
+                    publicIds.Encode(PublicIdKind.Contract, c.Agreement.Id, c.Agreement.TenantId),
+                    c.Agreement.ContractNumber,
+                    c.Agreement.ContractTypeCode,
+                    c.Agreement.ValidTo,
+                    publicIds.Encode(PublicIdKind.ContractEntitlement, ent.Id, ent.TenantId),
+                    publicIds.Encode(PublicIdKind.ClinicalService, ent.ServiceId, ent.TenantId),
+                    publicIds.EncodeOptional(PublicIdKind.ResourceCategory, ent.ResourceCategoryId, ent.TenantId),
+                    ent.AvailableUnits,
+                    ent.TotalUnits,
+                    ent.ConsumedUnits,
+                    ent.UnitPrice,
+                    ent.Currency));
+            }
+        }
+        return results;
+    }
+
+    public async Task<BookingPackageStatusResponse> GetBookingPackageStatusAsync(
+        long branchId, string bookingId, CancellationToken cancellationToken)
+    {
+        var branch = await RequireBranchAsync(FoundationPermissions.ContractsView, branchId, cancellationToken);
+        var decodedBookingId = publicIds.Decode(PublicIdKind.Booking, bookingId, branch.TenantId);
+        var reservation = await repository.GetActiveReservationForBookingAsync(branchId, decodedBookingId, false, cancellationToken);
+
+        if (reservation is null)
+        {
+            return new BookingPackageStatusResponse(bookingId, false, null, null, null, null, null, null);
+        }
+
+        var contract = await repository.GetContractAsync(branchId, reservation.Reservation.ContractId, false, cancellationToken);
+
+        return new BookingPackageStatusResponse(
+            bookingId,
+            true,
+            publicIds.Encode(PublicIdKind.EntitlementReservation, reservation.Reservation.Id, reservation.Reservation.TenantId),
+            publicIds.Encode(PublicIdKind.Contract, reservation.Reservation.ContractId, reservation.Reservation.TenantId),
+            contract?.Agreement.ContractNumber,
+            publicIds.Encode(PublicIdKind.ContractEntitlement, reservation.Reservation.EntitlementId, reservation.Reservation.TenantId),
+            reservation.Reservation.Units,
+            reservation.Reservation.Status.ToString());
+    }
+
+    public async Task<EntitlementReservationResponse> LinkBookingToPackageAsync(
+        long branchId, string bookingId, LinkBookingPackageRequest request, CancellationToken cancellationToken)
+    {
+        var branch = await RequireBranchAsync(FoundationPermissions.ContractEntitlementsReserve, branchId, cancellationToken);
+        var decodedBookingId = publicIds.Decode(PublicIdKind.Booking, bookingId, branch.TenantId);
+        var existing = await repository.GetActiveReservationForBookingAsync(branchId, decodedBookingId, false, cancellationToken);
+        if (existing is not null)
+            throw new DomainRuleException("This booking is already linked to an active package entitlement.");
+
+        var decodedContractId = publicIds.Decode(PublicIdKind.Contract, request.ContractId, branch.TenantId);
+        var decodedEntitlementId = publicIds.Decode(PublicIdKind.ContractEntitlement, request.EntitlementId, branch.TenantId);
+
+        var reserveReq = new ReserveEntitlementRequest(request.RequestId, bookingId, request.Units, request.ExpectedEntitlementVersion);
+        return await ReserveAsync(branchId, decodedContractId, decodedEntitlementId, reserveReq, cancellationToken);
+    }
+
+    public async Task<EntitlementReservationResponse> UnlinkBookingFromPackageAsync(
+        long branchId, string bookingId, UnlinkBookingPackageRequest request, CancellationToken cancellationToken)
+    {
+        var branch = await RequireBranchAsync(FoundationPermissions.ContractEntitlementsRelease, branchId, cancellationToken);
+        var decodedBookingId = publicIds.Decode(PublicIdKind.Booking, bookingId, branch.TenantId);
+        var existing = await repository.GetActiveReservationForBookingAsync(branchId, decodedBookingId, true, cancellationToken)
+            ?? throw new NotFoundException("This booking is not linked to any active package entitlement.");
+
+        var releaseReq = new ReleaseEntitlementReservationRequest(request.ExpectedReservationVersion, request.ExpectedEntitlementVersion, request.Reason);
+        return await ReleaseAsync(branchId, existing.Reservation.Id, releaseReq, cancellationToken);
+    }
 }

@@ -60,7 +60,8 @@ public enum PublicIdKind
     MessageTemplate,
     CommunicationPreferenceEvent,
     ProviderCallbackInbox,
-    MessageDeliveryStatusEvent
+    MessageDeliveryStatusEvent,
+    PatientRelation
 }
 
 public interface IPublicIdCodec

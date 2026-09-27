@@ -56,6 +56,8 @@ public sealed class BookDocDbContext(
 
     public DbSet<Patient> Patients => Set<Patient>();
 
+    public DbSet<PatientRelation> PatientRelations => Set<PatientRelation>();
+
     public DbSet<Stakeholder> Stakeholders => Set<Stakeholder>();
 
     public DbSet<StakeholderPerson> StakeholderPersons => Set<StakeholderPerson>();

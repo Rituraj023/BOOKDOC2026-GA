@@ -514,6 +514,15 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         return await ApiResponseReader.ReadAsync<TResponse>(response, cancellationToken);
     }
 
+    public async Task DeleteAsync(string relativeUrl, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.DeleteAsync(relativeUrl, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            await ApiResponseReader.ReadAsync<object>(response, cancellationToken);
+        }
+    }
+
     private static string TemplateActionUrl(string branchId, string templateId, string action) =>
         $"api/v1/branches/{Uri.EscapeDataString(branchId)}/communications/templates/" +
         $"{Uri.EscapeDataString(templateId)}/{action}";
@@ -552,4 +561,50 @@ public sealed class BookDocApiClient(HttpClient httpClient)
     private static string RadiologyStudyUrl(string branchId, string studyId) =>
         $"api/v1/branches/{Uri.EscapeDataString(branchId)}/radiology/studies/" +
         Uri.EscapeDataString(studyId);
+
+    public Task<IReadOnlyCollection<PatientRelationResponse>> ListPatientRelationsAsync(
+        string branchId, string patientId, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<PatientRelationResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/{Uri.EscapeDataString(patientId)}/relations",
+            cancellationToken);
+
+    public Task<PatientRelationResponse> AddPatientRelationAsync(
+        string branchId, string patientId, AddPatientRelationRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<AddPatientRelationRequest, PatientRelationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/{Uri.EscapeDataString(patientId)}/relations",
+            request, cancellationToken);
+
+    public Task RemovePatientRelationAsync(
+        string branchId, string relationId, CancellationToken cancellationToken = default) =>
+        DeleteAsync($"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/relations/{Uri.EscapeDataString(relationId)}",
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<PatientPackageSummaryResponse>> ListPatientActivePackagesAsync(
+        string branchId, string patientId, string? serviceId = null, CancellationToken cancellationToken = default)
+    {
+        var url = $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/patients/{Uri.EscapeDataString(patientId)}/active-packages";
+        if (!string.IsNullOrWhiteSpace(serviceId))
+        {
+            url += $"?serviceId={Uri.EscapeDataString(serviceId)}";
+        }
+        return GetAsync<IReadOnlyCollection<PatientPackageSummaryResponse>>(url, cancellationToken);
+    }
+
+    public Task<BookingPackageStatusResponse> GetBookingPackageStatusAsync(
+        string branchId, string bookingId, CancellationToken cancellationToken = default) =>
+        GetAsync<BookingPackageStatusResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/bookings/{Uri.EscapeDataString(bookingId)}/package-status",
+            cancellationToken);
+
+    public Task<EntitlementReservationResponse> LinkBookingPackageAsync(
+        string branchId, string bookingId, LinkBookingPackageRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<LinkBookingPackageRequest, EntitlementReservationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/bookings/{Uri.EscapeDataString(bookingId)}/link-package",
+            request, cancellationToken);
+
+    public Task<EntitlementReservationResponse> UnlinkBookingPackageAsync(
+        string branchId, string bookingId, UnlinkBookingPackageRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<UnlinkBookingPackageRequest, EntitlementReservationResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/contracts/bookings/{Uri.EscapeDataString(bookingId)}/unlink-package",
+            request, cancellationToken);
 }

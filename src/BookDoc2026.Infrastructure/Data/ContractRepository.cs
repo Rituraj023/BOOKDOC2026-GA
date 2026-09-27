@@ -101,4 +101,36 @@ public sealed class ContractRepository(BookDocDbContext dbContext) : IContractRe
             throw new DomainRuleException("Contract data conflicts with an existing number, request or relationship.");
         }
     }
+
+    public async Task<IReadOnlyCollection<ContractAggregate>> GetPatientActiveContractsAsync(
+        long branchId, long patientId, CancellationToken cancellationToken)
+    {
+        var agreements = await dbContext.Contracts.AsNoTracking()
+            .Where(item => item.BranchId == branchId && item.PatientId == patientId && item.Status == ContractStatus.Active)
+            .OrderByDescending(item => item.ValidTo)
+            .ToListAsync(cancellationToken);
+
+        var results = new List<ContractAggregate>(agreements.Count);
+        foreach (var agreement in agreements)
+        {
+            var entitlements = await dbContext.ContractEntitlements.AsNoTracking()
+                .Where(e => e.ContractId == agreement.Id)
+                .OrderBy(e => e.ServiceId)
+                .ToListAsync(cancellationToken);
+            results.Add(new ContractAggregate(agreement, entitlements));
+        }
+        return results;
+    }
+
+    public async Task<EntitlementReservationAggregate?> GetActiveReservationForBookingAsync(
+        long branchId, long bookingId, bool tracked, CancellationToken cancellationToken)
+    {
+        var reservations = dbContext.EntitlementReservations
+            .Where(item => item.BranchId == branchId && item.BookingId == bookingId && item.Status == EntitlementReservationStatus.Reserved);
+        var reservation = await (tracked ? reservations : reservations.AsNoTracking()).SingleOrDefaultAsync(cancellationToken);
+        if (reservation is null) return null;
+        var entitlements = dbContext.ContractEntitlements.Where(item => item.Id == reservation.EntitlementId);
+        var entitlement = await (tracked ? entitlements : entitlements.AsNoTracking()).SingleAsync(cancellationToken);
+        return new(reservation, entitlement);
+    }
 }

@@ -18,10 +18,15 @@ public sealed class ClinicalEncounter : TenantScopedEntity
     public long LatestRevisionId { get; private set; }
     public DateTimeOffset? SignedUtc { get; private set; }
     public long? SignedByActorId { get; private set; }
+    public long? SupervisingPractitionerId { get; private set; }
     public long Version { get; private set; } = 1;
 
     public static (ClinicalEncounter Encounter, EncounterRevision Revision) Start(
-        Booking booking, EncounterContent content, long actorId, DateTimeOffset now)
+        Booking booking, EncounterContent content, long actorId, DateTimeOffset now) =>
+        Start(booking, content, actorId, null, now);
+
+    public static (ClinicalEncounter Encounter, EncounterRevision Revision) Start(
+        Booking booking, EncounterContent content, long actorId, long? supervisingPractitionerId, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(booking);
         ArgumentNullException.ThrowIfNull(content);
@@ -36,7 +41,8 @@ public sealed class ClinicalEncounter : TenantScopedEntity
             PatientId = booking.PatientId,
             ServiceId = booking.ServiceId,
             EncounterNumber = CreateNumber(booking.Id),
-            Status = EncounterStatus.Draft
+            Status = EncounterStatus.Draft,
+            SupervisingPractitionerId = supervisingPractitionerId
         };
         encounter.StampCreated(now);
         var revision = EncounterRevision.Create(encounter, 1, EncounterRevisionKind.Draft, null,
@@ -44,6 +50,14 @@ public sealed class ClinicalEncounter : TenantScopedEntity
         encounter.LatestRevisionNumber = 1;
         encounter.LatestRevisionId = revision.Id;
         return (encounter, revision);
+    }
+
+    public void AssignSupervisingPractitioner(long? supervisingPractitionerId, DateTimeOffset now)
+    {
+        if (Status != EncounterStatus.Draft)
+            throw new DomainRuleException("Only a draft encounter can update the supervising practitioner.");
+        SupervisingPractitionerId = supervisingPractitionerId;
+        StampModified(now);
     }
 
     public EncounterRevision ReviseDraft(EncounterRevision latest, EncounterContent content,

@@ -20,6 +20,7 @@ internal sealed class ClinicalEncounterConfiguration : IEntityTypeConfiguration<
         builder.Property(item => item.Version).IsConcurrencyToken();
         builder.HasIndex(item => new { item.TenantId, item.BranchId, item.BookingId }).IsUnique();
         builder.HasIndex(item => new { item.TenantId, item.BranchId, item.PatientId, item.Status });
+        builder.HasIndex(item => new { item.TenantId, item.BranchId, item.SupervisingPractitionerId });
         builder.HasOne<Branch>().WithMany()
             .HasForeignKey(item => new { item.TenantId, item.BranchId })
             .HasPrincipalKey(item => new { item.TenantId, item.Id });
