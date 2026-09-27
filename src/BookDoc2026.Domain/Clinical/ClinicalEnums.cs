@@ -12,3 +12,13 @@ public enum EncounterRevisionKind : byte
     Signed = 2,
     Amendment = 3
 }
+
+public enum InvestigationOrderStatus : byte
+{
+    Requested = 1
+}
+
+public enum InvestigationResultStatus : byte
+{
+    Pending = 1
+}

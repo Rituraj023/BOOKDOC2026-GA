@@ -1,0 +1,13 @@
+<span class="study-status @CssClass">@Status</span>
+
+@code {
+    [Parameter, EditorRequired] public string Status { get; set; } = string.Empty;
+    private string CssClass => Status.ToLowerInvariant() switch
+    {
+        "qualityaccepted" => "accepted",
+        "repeatrequired" => "repeat",
+        "aborted" or "cancelled" => "stopped",
+        "inprogress" => "active",
+        _ => "pending"
+    };
+}

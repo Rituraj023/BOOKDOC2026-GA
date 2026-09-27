@@ -1,0 +1,5 @@
+.physio-status { display: inline-flex; padding: .28rem .58rem; border-radius: 999px; color: #334155; background: #e2e8f0; font-size: .72rem; font-weight: 750; }
+.physio-status.active { color: #166534; background: #dcfce7; }
+.physio-status.draft { color: #854d0e; background: #fef9c3; }
+.physio-status.completed { color: #1e40af; background: #dbeafe; }
+.physio-status.discontinued { color: #7f1d1d; background: #fee2e2; }

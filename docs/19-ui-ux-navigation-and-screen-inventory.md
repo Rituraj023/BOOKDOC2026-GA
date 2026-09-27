@@ -24,6 +24,9 @@ Navigation is permission-composed. A role sees only authorized modules and dashb
 
 ## Portal navigation candidates
 
+- Clinical agenda: effective Practitioner-assignment worklist, common Encounter draft/revision/sign workflow, immutable history and authorized specialty handoff. DOC-053/054 implement and render the policy-neutral reference screen; DOC-055 adds configured X-ray/CT Order request plus modality-filtered Queue handoff while keeping Order/Result/Queue states visible and separate. Clinical UAT remains open.
+- Physiotherapist workspace: bounded branch care-plan worklist, status/search filters, immutable clinical history, separately permissioned lifecycle/session/outcome commands and dynamic like-for-like outcome series. DOC-052 implements the policy-neutral reference screen; scheduled Encounter handoff, approved templates and clinician UAT remain open.
+
 - Role dashboard and assigned tasks
 - Patient search/registration/profile
 - Calendar, appointments, resource board and waitlist
@@ -31,7 +34,7 @@ Navigation is permission-composed. A role sees only authorized modules and dashb
 - Practitioner agenda and encounter workspace
 - Physiotherapy assessment, care plan, session note, outcome trend and exercise-program workspace
 - Orthopaedic examination, imaging review/status, procedure, prescription and follow-up workspace
-- Investigation/modality worklists and result status
+- Investigation order and modality worklists: signed-Encounter request and Queue handoff are implemented in DOC-055; DOC-056 adds a separately permissioned technician list with explicit bounded Patient/Encounter/Service/indication disclosure and independent Queue commands. [DOC-059](59-portal-radiology-execution-quality-workspace.md) adds the shared Study execution workspace, matching-equipment selection, immutable attempt/review history and separate eligible operator/quality-reviewer command sets. Queue, Study and future Result status remain visibly independent. Approved clinical policy, Study realtime invalidation and all interpretation/release work remain open.
 - Invoice, collections, cashier close and permitted refunds
 - Permission-approved operational reports and document output
 

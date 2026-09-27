@@ -1,0 +1,179 @@
+@using BookDoc2026.Blazor.UI.Radiology
+@using BookDoc2026.Contracts.Radiology
+
+<section class="study-workspace" aria-label="Radiology study execution">
+    <div class="workspace-heading">
+        <div>
+            <p class="workspace-eyebrow">@WorkItem.OrderNumber · @WorkItem.Modality</p>
+            <h3>@WorkItem.PatientDisplayName — @WorkItem.ServiceName</h3>
+            <p>@WorkItem.ClinicalIndication</p>
+        </div>
+        <div class="workspace-actions">
+            @if (Study is not null) { <RadiologyStudyStatusBadge Status="@Study.Status" /> }
+            <button type="button" @onclick="RefreshAsync" disabled="@Busy">Refresh study</button>
+            <button type="button" @onclick="CloseAsync" disabled="@Busy">Close</button>
+        </div>
+    </div>
+
+    <p class="boundary-note">Study execution is independent from Queue status <strong>@WorkItem.QueueTicket.Status</strong>. It does not create an interpreted Result, report or patient release.</p>
+
+    @if (Study is null)
+    {
+        <div class="command-card">
+            <h4>Study is not registered</h4>
+            @if (CanStart)
+            {
+                <p>Register one Study for this queued Investigation Order. Retrying after an uncertain response uses the same request identity.</p>
+                <button type="button" class="primary-command" @onclick="RegisterAsync" disabled="@Busy">Register study</button>
+            }
+            else
+            {
+                <p>An eligible operator with <code>Radiology.Studies.Start</code> must register the Study.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <dl class="study-summary">
+            <div><dt>Study version</dt><dd>@Study.Version</dd></div>
+            <div><dt>Attempts</dt><dd>@Study.AcquisitionAttemptCount</dd></div>
+            <div><dt>Registered</dt><dd>@Study.RegisteredUtc.ToLocalTime().ToString("g")</dd></div>
+            <div><dt>Queue status</dt><dd>@WorkItem.QueueTicket.Status</dd></div>
+        </dl>
+
+        @if (Study.Status is "Registered" or "RepeatRequired")
+        {
+            <div class="command-card">
+                <h4>@(Study.Status == "RepeatRequired" ? "Start approved repeat" : "Start acquisition")</h4>
+                @if (CanStart)
+                {
+                    <p>An active Practitioner credential and effective branch/service assignment are rechecked by the API.</p>
+                    <button type="button" class="primary-command" @onclick="StartAsync" disabled="@Busy">@(Study.Status == "RepeatRequired" ? "Start repeat" : "Start study")</button>
+                }
+                else { <p>Waiting for an eligible operator.</p> }
+            </div>
+        }
+
+        @if (Study.Status == "InProgress")
+        {
+            <div class="command-card">
+                <h4>Record immutable acquisition attempt</h4>
+                @if (CanAcquire)
+                {
+                    @if (Equipment.Count == 0)
+                    {
+                        <p class="warning-note">No active, available matching-modality equipment advertises this ordered service.</p>
+                    }
+                    else
+                    {
+                        <div class="radiology-form-grid">
+                            <label>Eligible equipment<select @bind="AcquisitionDraft.EquipmentResourceId"><option value="">Select equipment</option>@foreach (var item in Equipment) { <option value="@item.Id">@item.Code · @item.Name</option> }</select></label>
+                            <label>Outcome<select @bind="AcquisitionDraft.Outcome"><option>Acquired</option><option>Aborted</option></select></label>
+                            <label>Protocol code<input @bind="AcquisitionDraft.ProtocolCode" @bind:event="oninput" /></label>
+                            <label>Protocol version<input @bind="AcquisitionDraft.ProtocolVersion" @bind:event="oninput" /></label>
+                            <label>Started locally<input type="datetime-local" @bind="AcquisitionDraft.StartedLocal" /></label>
+                            <label>Completed locally<input type="datetime-local" @bind="AcquisitionDraft.CompletedLocal" /></label>
+                            <label class="check-field"><input type="checkbox" @bind="AcquisitionDraft.HasProtocolDeviation" /> Protocol deviation</label>
+                            @if (AcquisitionDraft.HasProtocolDeviation)
+                            {
+                                <label>Deviation code<input @bind="AcquisitionDraft.DeviationCode" @bind:event="oninput" /></label>
+                                <label class="wide">Deviation note (optional)<textarea @bind="AcquisitionDraft.DeviationNote" @bind:event="oninput"></textarea></label>
+                            }
+                            @if (AcquisitionDraft.Outcome == "Aborted")
+                            {
+                                <label>Abort reason code<input @bind="AcquisitionDraft.OutcomeReasonCode" @bind:event="oninput" /></label>
+                                <label class="wide">Abort note (optional)<textarea @bind="AcquisitionDraft.OutcomeNote" @bind:event="oninput"></textarea></label>
+                            }
+                            <label class="wide">External PACS/VNA Study reference (optional, internal only)<input @bind="AcquisitionDraft.ExternalStudyReference" @bind:event="oninput" /></label>
+                        </div>
+                        <button type="button" class="primary-command" @onclick="RecordAcquisitionAsync" disabled="@(Busy || !AcquisitionDraft.CanSubmit)">Record acquisition</button>
+                    }
+                }
+                else { <p>Waiting for an eligible operator with acquisition permission.</p> }
+            </div>
+        }
+
+        @if (Study.Status == "Acquired")
+        {
+            <div class="command-card quality-card">
+                <h4>Independent technical-quality review</h4>
+                @if (CanReview)
+                {
+                    <p>The performing operator cannot review their own attempt. Permission and current Practitioner eligibility are rechecked.</p>
+                    <div class="radiology-form-grid">
+                        <label>Decision<select @bind="QualityDraft.Decision"><option>Accepted</option><option>RepeatRequired</option></select></label>
+                        <label>Reason code<input @bind="QualityDraft.ReasonCode" @bind:event="oninput" /></label>
+                        <label class="wide">Review note (optional)<textarea @bind="QualityDraft.Note" @bind:event="oninput"></textarea></label>
+                    </div>
+                    <button type="button" class="primary-command" @onclick="ReviewQualityAsync" disabled="@(Busy || !QualityDraft.CanSubmit)">Record quality decision</button>
+                }
+                else { <p>Waiting for a separately eligible quality reviewer.</p> }
+            </div>
+        }
+
+        @if (Study.Status == "QualityAccepted")
+        {
+            <div class="completion-note"><strong>Technical quality accepted.</strong> No interpretation, report or release has been created.</div>
+        }
+        else if (Study.Status == "Aborted")
+        {
+            <div class="warning-note"><strong>Acquisition aborted.</strong> Queue, Order and Result were not completed automatically.</div>
+        }
+
+        @if (Study.AcquisitionAttempts.Count > 0)
+        {
+            <div class="history-block">
+                <h4>Immutable acquisition and review history</h4>
+                <div class="history-list">
+                    @foreach (var attempt in Study.AcquisitionAttempts.OrderByDescending(item => item.Sequence))
+                    {
+                        var review = Study.QualityReviews.SingleOrDefault(item => item.AcquisitionAttemptId == attempt.Id);
+                        <article>
+                            <div><strong>Attempt @attempt.Sequence · @attempt.Outcome</strong><span>@attempt.ProtocolCode / @attempt.ProtocolVersion</span></div>
+                            <p>@attempt.StartedUtc.ToLocalTime().ToString("g")–@attempt.CompletedUtc.ToLocalTime().ToString("g") · Equipment @EquipmentLabel(attempt.EquipmentResourceId)</p>
+                            @if (attempt.HasProtocolDeviation) { <p>Deviation: @attempt.DeviationCode @attempt.DeviationNote</p> }
+                            @if (attempt.Outcome == "Aborted") { <p>Abort: @attempt.OutcomeReasonCode @attempt.OutcomeNote</p> }
+                            @if (attempt.HasExternalStudyReference) { <p>External Study reference recorded (value hidden).</p> }
+                            @if (review is not null) { <p class="review-line">Quality: <strong>@review.Decision</strong> · @review.ReasonCode @review.Note</p> }
+                        </article>
+                    }
+                </div>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public InvestigationWorklistItemResponse WorkItem { get; set; } = default!;
+    [Parameter] public RadiologyStudyResponse? Study { get; set; }
+    [Parameter] public IReadOnlyList<RadiologyEquipmentOptionResponse> Equipment { get; set; } = [];
+    [Parameter, EditorRequired] public RadiologyAcquisitionDraft AcquisitionDraft { get; set; } = default!;
+    [Parameter, EditorRequired] public RadiologyQualityDraft QualityDraft { get; set; } = default!;
+    [Parameter] public bool CanStart { get; set; }
+    [Parameter] public bool CanAcquire { get; set; }
+    [Parameter] public bool CanReview { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback Register { get; set; }
+    [Parameter] public EventCallback Start { get; set; }
+    [Parameter] public EventCallback RecordAcquisition { get; set; }
+    [Parameter] public EventCallback ReviewQuality { get; set; }
+    [Parameter] public EventCallback Refresh { get; set; }
+    [Parameter] public EventCallback Close { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        var latest = Study?.AcquisitionAttempts.OrderByDescending(item => item.Sequence).FirstOrDefault();
+        if (Study?.Status == "Acquired" && latest is not null) QualityDraft.LoadAttempt(latest.Id);
+        if (Equipment.Count == 1 && string.IsNullOrWhiteSpace(AcquisitionDraft.EquipmentResourceId))
+            AcquisitionDraft.EquipmentResourceId = Equipment[0].Id;
+    }
+
+    private string EquipmentLabel(string id) => Equipment.SingleOrDefault(item => item.Id == id)?.Code
+        ?? "protected resource";
+    private Task RegisterAsync() => Register.InvokeAsync();
+    private Task StartAsync() => Start.InvokeAsync();
+    private Task RecordAcquisitionAsync() => RecordAcquisition.InvokeAsync();
+    private Task ReviewQualityAsync() => ReviewQuality.InvokeAsync();
+    private Task RefreshAsync() => Refresh.InvokeAsync();
+    private Task CloseAsync() => Close.InvokeAsync();
+}

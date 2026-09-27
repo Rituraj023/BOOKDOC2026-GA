@@ -39,6 +39,18 @@ public static class FoundationPermissions
     public const string EncounterDraftsManage = "Encounters.Drafts.Manage";
     public const string EncountersSign = "Encounters.Sign";
     public const string EncountersAmend = "Encounters.Amend";
+    public const string InvestigationsView = "Investigations.View";
+    public const string InvestigationOrdersCreate = "Investigations.Orders.Create";
+    public const string InvestigationQueueHandoff = "Investigations.Queue.Handoff";
+    public const string InvestigationWorklistView = "Investigations.Worklist.View";
+    public const string RadiologyStudiesView = "Radiology.Studies.View";
+    public const string RadiologyStudiesStart = "Radiology.Studies.Start";
+    public const string RadiologyAcquisitionsRecord = "Radiology.Acquisitions.Record";
+    public const string RadiologyStudiesQualityReview = "Radiology.Studies.QualityReview";
+    public const string PhysiotherapyCarePlansView = "Physiotherapy.CarePlans.View";
+    public const string PhysiotherapyCarePlansManage = "Physiotherapy.CarePlans.Manage";
+    public const string PhysiotherapySessionsRecord = "Physiotherapy.Sessions.Record";
+    public const string PhysiotherapyOutcomesRecord = "Physiotherapy.Outcomes.Record";
     public const string PractitionersView = "Practitioners.View";
     public const string PractitionersManage = "Practitioners.Manage";
     public const string PractitionerCredentialsVerify = "Practitioners.Credentials.Verify";
@@ -99,6 +111,18 @@ public static class FoundationPermissions
         EncounterDraftsManage,
         EncountersSign,
         EncountersAmend,
+        InvestigationsView,
+        InvestigationOrdersCreate,
+        InvestigationQueueHandoff,
+        InvestigationWorklistView,
+        RadiologyStudiesView,
+        RadiologyStudiesStart,
+        RadiologyAcquisitionsRecord,
+        RadiologyStudiesQualityReview,
+        PhysiotherapyCarePlansView,
+        PhysiotherapyCarePlansManage,
+        PhysiotherapySessionsRecord,
+        PhysiotherapyOutcomesRecord,
         PractitionersView,
         PractitionersManage,
         PractitionerCredentialsVerify,

@@ -10,6 +10,7 @@ using BookDoc2026.Domain.Foundation;
 using BookDoc2026.Domain.Identity;
 using BookDoc2026.Domain.Patients;
 using BookDoc2026.Domain.Queues;
+using BookDoc2026.Domain.Radiology;
 using BookDoc2026.Domain.Scheduling;
 using BookDoc2026.Domain.Stakeholders;
 using BookDoc2026.Domain.Workforce;
@@ -95,6 +96,16 @@ public sealed class BookDocDbContext(
     public DbSet<EntitlementReservation> EntitlementReservations => Set<EntitlementReservation>();
     public DbSet<ClinicalEncounter> ClinicalEncounters => Set<ClinicalEncounter>();
     public DbSet<EncounterRevision> EncounterRevisions => Set<EncounterRevision>();
+    public DbSet<InvestigationOrder> InvestigationOrders => Set<InvestigationOrder>();
+    public DbSet<InvestigationOrderEvent> InvestigationOrderEvents => Set<InvestigationOrderEvent>();
+    public DbSet<RadiologyStudy> RadiologyStudies => Set<RadiologyStudy>();
+    public DbSet<RadiologyStudyEvent> RadiologyStudyEvents => Set<RadiologyStudyEvent>();
+    public DbSet<RadiologyAcquisitionAttempt> RadiologyAcquisitionAttempts => Set<RadiologyAcquisitionAttempt>();
+    public DbSet<RadiologyQualityReview> RadiologyQualityReviews => Set<RadiologyQualityReview>();
+    public DbSet<PhysiotherapyCarePlan> PhysiotherapyCarePlans => Set<PhysiotherapyCarePlan>();
+    public DbSet<PhysiotherapyCarePlanRevision> PhysiotherapyCarePlanRevisions => Set<PhysiotherapyCarePlanRevision>();
+    public DbSet<PhysiotherapyTreatmentSession> PhysiotherapyTreatmentSessions => Set<PhysiotherapyTreatmentSession>();
+    public DbSet<PhysiotherapyOutcomeObservation> PhysiotherapyOutcomeObservations => Set<PhysiotherapyOutcomeObservation>();
     public DbSet<PractitionerProfile> PractitionerProfiles => Set<PractitionerProfile>();
     public DbSet<PractitionerCredential> PractitionerCredentials => Set<PractitionerCredential>();
     public DbSet<PractitionerAssignment> PractitionerAssignments => Set<PractitionerAssignment>();
@@ -175,6 +186,26 @@ public sealed class BookDocDbContext(
         modelBuilder.Entity<ClinicalEncounter>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<EncounterRevision>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<InvestigationOrder>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<InvestigationOrderEvent>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<RadiologyStudy>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<RadiologyStudyEvent>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<RadiologyAcquisitionAttempt>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<RadiologyQualityReview>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PhysiotherapyCarePlan>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PhysiotherapyCarePlanRevision>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PhysiotherapyTreatmentSession>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PhysiotherapyOutcomeObservation>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<PractitionerProfile>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
@@ -257,6 +288,9 @@ public sealed class BookDocDbContext(
         ProtectBookingResourceAllocations();
         ProtectQueueTicketEvents();
         ProtectEncounterRevisions();
+        ProtectInvestigationOrderEvents();
+        ProtectRadiologyHistory();
+        ProtectPhysiotherapyClinicalHistory();
         ProtectPostedFinancialRecords();
         ProtectTenantScope();
         return base.SaveChangesAsync(cancellationToken);
@@ -319,6 +353,36 @@ public sealed class BookDocDbContext(
         if (ChangeTracker.Entries<EncounterRevision>()
             .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Clinical encounter revisions are append-only.");
+    }
+
+    private void ProtectInvestigationOrderEvents()
+    {
+        if (ChangeTracker.Entries<InvestigationOrderEvent>()
+            .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Investigation order events are append-only.");
+    }
+
+    private void ProtectRadiologyHistory()
+    {
+        if (ChangeTracker.Entries<RadiologyStudyEvent>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<RadiologyAcquisitionAttempt>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<RadiologyQualityReview>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException(
+                "Radiology study events, acquisition attempts and quality reviews are append-only.");
+    }
+
+    private void ProtectPhysiotherapyClinicalHistory()
+    {
+        if (ChangeTracker.Entries<PhysiotherapyCarePlanRevision>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<PhysiotherapyTreatmentSession>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted)
+            || ChangeTracker.Entries<PhysiotherapyOutcomeObservation>()
+                .Any(entry => entry.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Physiotherapy revisions, sessions and outcomes are append-only.");
     }
 
     private void ProtectPostedFinancialRecords()

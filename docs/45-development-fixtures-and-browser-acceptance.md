@@ -49,6 +49,10 @@ Create refuses to overwrite an existing fixture. Removal targets only the fixed 
 
 No fixture password, access token, signing key, provider credential or real endpoint secret is committed. Operators must provide the temporary password through local external configuration and run removal after validation.
 
+The same guarded command was later extended with assigned/unassigned clinician identities, Practitioner/credential/assignment truth and one resource-allocated clinical Booking. Its clinical create/use/removal evidence is recorded separately in [DOC-054](54-clinical-development-fixtures-and-browser-acceptance.md); the queue evidence and counts below remain the historical DOC-045 checkpoint.
+
+The current technician fixture permission composition is updated in [DOC-056](56-radiology-technician-ordered-worklist.md): `Investigations.Worklist.View` replaces the generic `Queues.View` requirement for the technician Portal projection, while call/progress/cancel/display capabilities remain independently granted. [DOC-059](59-portal-radiology-execution-quality-workspace.md) further adds Study view/start/acquisition permissions to the eligible operator, a separate quality-review-only role/Practitioner chain, matching X-ray equipment and deliberately non-matching CT equipment. The earlier list above remains the historical permissions used for this DOC-045 browser run.
+
 ## Browser defects discovered and corrected
 
 Real browser execution found defects that controller and state-model tests could not reveal:

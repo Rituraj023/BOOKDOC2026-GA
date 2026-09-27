@@ -19,6 +19,12 @@
 | Queue ticket | operational waiting/service progression; not a clinical record | Queue |
 | Encounter | clinical care episode and versioned documentation | Clinical |
 | Investigation order | request for lab/imaging activity and its controlled lifecycle | Investigations |
+| Radiology study | one imaging-execution root for an accepted order; distinct from Queue and report | Radiology |
+| Acquisition attempt | immutable evidence of one performed/aborted imaging attempt, operator, equipment, protocol and outcome | Radiology |
+| Technical quality review | explicit accept/repeat decision for an acquisition; not diagnostic interpretation | Radiology |
+| Radiology report version | immutable authored/interpreted content version; signed versions cannot be overwritten | Radiology |
+| Critical-result acknowledgement | explicit accountable-recipient confirmation; not delivery, opening or patient release | Radiology/Clinical boundary |
+| Report release | authorized distribution of one signed version and immutable snapshot to a defined audience | Radiology/Documents boundary |
 | Physiotherapy care plan | versioned goals, measures, precautions, planned interventions and course status across therapy sessions | Clinical/Physiotherapy |
 | Therapy session | one performed physiotherapy contact with interventions, response, measures and author | Clinical/Physiotherapy |
 | Home exercise program | versioned patient instructions; not proof that an exercise was performed | Clinical/Physiotherapy |
@@ -35,6 +41,7 @@
 - Patient Registry owns the patient role, patient number, clinical registration status and patient-specific attributes. A Patient must reference a Person stakeholder; it does not duplicate the person's name, birth date, sex, contacts, addresses, identifiers or documents.
 - The implemented Practitioner role references a Person Stakeholder while Workforce owns credentials and assignments. Future employee, guardian, payer, supplier and corporate relationships should use the same rule: reference Stakeholder truth while each module owns only its role-specific state.
 - Scheduling owns appointments/reservations; Queue owns service progression; Clinical owns encounter truth.
+- Investigations owns the Order; Radiology owns Study/acquisition/technical-quality and future report/communication/release facts. Queue progression cannot write either module's clinical state, and DocumentService owns generated artifact mechanics rather than report meaning or release authority. DOC-058 implements ownership through technical quality; DOC-057 controls all later stages.
 - Reporting owns definitions/executions/snapshots but reads module-owned projections, not unrestricted tables.
 - Documents owns binary storage metadata; the originating module owns meaning, access and retention classification.
 - Legacy IDs remain mapping evidence and never become authorization scope.

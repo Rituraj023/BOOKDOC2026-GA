@@ -12,7 +12,7 @@ public sealed class RadiologyCheckInDraftTests
         var firstRequest = draft.RequestId;
 
         Assert.Equal(firstRequest, draft.RequestId);
-        draft.Complete(new("ticket", "point", "patient", null, "Q-001", "Normal", "Waiting",
+        draft.Complete(new("ticket", "point", "patient", null, null, "Q-001", "Normal", "Waiting",
             DateTimeOffset.UtcNow, null, null, null, null, 0, 1, false));
         Assert.True(draft.IsComplete);
 

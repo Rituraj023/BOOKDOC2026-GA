@@ -1,0 +1,22 @@
+<div class="encounter-history">
+@foreach (var revision in Encounter.Revisions.OrderByDescending(item => item.RevisionNumber))
+{
+    <article class="encounter-revision">
+        <header><strong>Revision @revision.RevisionNumber · @revision.Kind</strong><span>@revision.CreatedUtc.ToLocalTime().ToString("g")</span></header>
+        @if (!string.IsNullOrWhiteSpace(revision.AmendmentReason)) { <p class="amendment">Reason: @revision.AmendmentReason</p> }
+        <dl><dt>Specialty/template</dt><dd>@revision.Content.SpecialtyCode · @revision.Content.TemplateKey @revision.Content.TemplateVersion</dd><dt>Chief complaint</dt><dd>@revision.Content.ChiefComplaint</dd>
+            @if (!string.IsNullOrWhiteSpace(revision.Content.History)) { <dt>History</dt><dd>@revision.Content.History</dd> }
+            @if (!string.IsNullOrWhiteSpace(revision.Content.Examination)) { <dt>Examination</dt><dd>@revision.Content.Examination</dd> }
+            @if (!string.IsNullOrWhiteSpace(revision.Content.Assessment)) { <dt>Assessment</dt><dd>@revision.Content.Assessment</dd> }
+            @if (!string.IsNullOrWhiteSpace(revision.Content.Plan)) { <dt>Plan</dt><dd>@revision.Content.Plan</dd> }
+            @if (!string.IsNullOrWhiteSpace(revision.Content.Instructions)) { <dt>Instructions</dt><dd>@revision.Content.Instructions</dd> }
+            @if (!string.IsNullOrWhiteSpace(revision.Content.BodySite)) { <dt>Body site</dt><dd>@revision.Content.BodySite @revision.Content.LateralityCode</dd> }
+        </dl><small>Integrity @ShortHash(revision.ContentHash)</small>
+    </article>
+}
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EncounterResponse Encounter { get; set; } = default!;
+    private static string ShortHash(string value) => value.Length <= 12 ? value : $"{value[..12]}…";
+}

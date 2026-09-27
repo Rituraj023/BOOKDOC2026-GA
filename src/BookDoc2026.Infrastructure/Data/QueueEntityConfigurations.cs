@@ -1,4 +1,5 @@
 using BookDoc2026.Domain.Catalog;
+using BookDoc2026.Domain.Clinical;
 using BookDoc2026.Domain.Foundation;
 using BookDoc2026.Domain.Patients;
 using BookDoc2026.Domain.Queues;
@@ -47,6 +48,8 @@ internal sealed class QueueTicketConfiguration : IEntityTypeConfiguration<QueueT
         builder.HasIndex(item => new { item.TenantId, item.BranchId, item.ServicePointId, item.Status, item.Priority, item.ArrivedUtc });
         builder.HasIndex(item => new { item.TenantId, item.ServicePointId, item.BookingId })
             .IsUnique().HasFilter("[booking_id] IS NOT NULL AND [status] >= 1 AND [status] <= 4");
+        builder.HasIndex(item => new { item.TenantId, item.InvestigationOrderId })
+            .IsUnique().HasFilter("[investigation_order_id] IS NOT NULL");
         builder.HasOne<Branch>().WithMany()
             .HasForeignKey(item => new { item.TenantId, item.BranchId })
             .HasPrincipalKey(item => new { item.TenantId, item.Id });
@@ -58,6 +61,9 @@ internal sealed class QueueTicketConfiguration : IEntityTypeConfiguration<QueueT
             .HasPrincipalKey(item => new { item.TenantId, item.Id });
         builder.HasOne<Booking>().WithMany()
             .HasForeignKey(item => new { item.TenantId, item.BookingId })
+            .HasPrincipalKey(item => new { item.TenantId, item.Id });
+        builder.HasOne<InvestigationOrder>().WithMany()
+            .HasForeignKey(item => new { item.TenantId, item.InvestigationOrderId })
             .HasPrincipalKey(item => new { item.TenantId, item.Id });
     }
 }

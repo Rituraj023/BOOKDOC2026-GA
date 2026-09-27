@@ -1,0 +1,5 @@
+<span class="physio-status @Status.ToLowerInvariant()">@Status</span>
+
+@code {
+    [Parameter, EditorRequired] public string Status { get; set; } = string.Empty;
+}

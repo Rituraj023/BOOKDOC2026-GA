@@ -2,12 +2,12 @@
 
 Owner: Product + architecture + delivery + security + operations + module owners  
 Status: Proposed execution control plan  
-Reviewed: 2026-08-23
-Baseline: 73.25% simple average across the twenty concerns in DOC-033 after the Portal Cashier/Admin Billing oversight slice; rows 6, 7 and 15 advance while production/policy/acceptance gates stay open
+Reviewed: 2026-08-29
+Baseline: 75.425% exact (75.43% reported) simple average across the twenty concerns in DOC-033 after the authenticated Radiology operator/reviewer Portal reference; row 16 is 89.75% while clinical/radiology/compliance validation, Study realtime/reconnect evidence and production gates stay open
 
 ## Purpose
 
-Provide an evidence-based execution path from the current 73.25% architecture-achievement checkpoint to 100% for the agreed BOOKDOC2026 clinic-management scope. This plan converts every row in the [Architecture Understanding and Achievement Report](33-architecture-understanding-and-achievement-report.md) into implementation, validation and acceptance gates.
+Provide an evidence-based execution path from the current 75.425% architecture-achievement checkpoint (75.43% reported) to 100% for the agreed BOOKDOC2026 clinic-management scope. This plan converts every row in the [Architecture Understanding and Achievement Report](33-architecture-understanding-and-achievement-report.md) into implementation, validation and acceptance gates.
 
 This document does not claim that planning raises the score. It defines how later work earns each increase.
 
@@ -68,24 +68,24 @@ Work may run in parallel when dependency and data ownership allow it, but no lat
 |---:|---:|---|---|---|
 | 1 | 90% | Architecture/legacy authority ADR accepted; live DB and user walkthrough traceability complete; forbidden dependency and legacy-copy checks remain green | Architecture + discovery | Production evidence and workflow owners |
 | 2 | 100% | Preserve the three-product-host boundary through architecture tests and release review; any new executable host requires an approved ADR | Architecture | Continuous regression control |
-| 3 | 90% | API composes all clinic modules, commands, queries, provider adapters and Worker services with versioned contracts, authorization, observability, limits and runbooks | Backend + module owners | Rows 11–19 |
+| 3 | 95% | API composes all clinic modules, commands, queries, provider adapters and Worker services with versioned contracts, authorization, observability, limits and runbooks | Backend + module owners | Rows 11–19 |
 | 4 | 85% | Typed immediate/scheduled handlers, fair leasing, retry/dead-letter/replay, monitoring and idempotency pass multi-instance tests; legacy Windows service completes controlled parallel run and retirement | Worker + operations | Message/task inventory and providers |
 | 5 | 95% | AppHost launches the complete development topology and selected dependencies with documented profiles, synthetic seed procedure and smoke evidence; remains absent from production | Developer experience | Selected SQL/storage/telemetry development dependencies |
 | 6 | 70% | Admin implements authorized control plane, tenant/configuration/user management, reports/schedules, import/export, audit/jobs and fail-closed network restriction with accessible UX | Admin + platform + security | Rows 3, 11, 12, 18 |
-| 7 | 75% | Portal implements secure session UX, permission dashboards and approved clinic/patient workflows with scoped data, visible error/recovery states and accessibility evidence | Portal + product | Stable APIs and rows 9–10 |
+| 7 | 86.25% | Portal implements secure session UX, permission dashboards and approved clinic/patient workflows with scoped data, visible error/recovery states and accessibility evidence | Portal + product | Stable APIs and rows 9–10 |
 | 8 | 50% | Approved MAUI M1 journeys work on supported real devices with secure session rotation, push/deep links, connectivity/offline rules, accessibility and release operations | Mobile + product | Rows 7, 9, 10, 17 |
-| 9 | 70% | Shared design tokens, layouts, authorization-aware navigation and loading/empty/error/offline states are reused by real Admin/Portal/Mobile journeys and pass component/accessibility tests | Blazor.UI + Maui.UI + UX | Approved screen system |
+| 9 | 86.25% | Shared design tokens, layouts, authorization-aware navigation and loading/empty/error/offline states are reused by real Admin/Portal/Mobile journeys and pass component/accessibility tests | Blazor.UI + Maui.UI + UX | Approved screen system |
 | 10 | 75% | One versioned Contracts/Client boundary supports every shipped host; login/refresh/revoke/replay, compatibility, typed errors and device token storage pass integration/device tests | Client + Identity + mobile | Rows 3 and 11 |
 | 11 | 85% | MFA/privileged policy, production signing-key and Data Protection operations, session/device administration, access reviews and revocation are implemented and rehearsed | Identity + security + operations | Production environment and policy approval |
 | 12 | 75% | Onboarding/control-plane UX, approval/provisioning, lifecycle, quotas, branch overrides, support elevation, export/closure and large-tenant fairness/isolation pass acceptance | Platform + tenant module | Named platform operators and scale tests |
 | 13 | 75% | Stakeholder/Patient duplicate detection and merge, consent, relations, document lifecycle and representative production migration maps work without duplicating party data | Stakeholder + Patient Registry | Live schema/profile and clinic owner decisions |
 | 14 | 70% | Confirmed multi-resource booking covers practitioners, rooms, equipment/modalities and approved bed/chair categories, including reschedule/cancel/waitlist/overbook/concurrency rules | Catalog + Resources + Scheduling | Approved resource/rule catalog |
 | 15 | 50% | Legacy contract/package entitlement matrix is user-approved; contract consumption, price/tax snapshots, invoice/payment/allocation/refund/adjustment/daily-close flows reconcile end to end | Contract + Billing + finance owners | Live legacy data and business owner workshops |
-| 16 | 85% | Permission-composed dashboards and first OPD plus imaging queue vertical slice work in approved hosts; scoped SignalR reconnect/invalidation and API reconciliation pass | Dashboard + Queue + Realtime | Rows 6–7, 14 and clinical workflows |
+| 16 | 89.75% | Permission-composed dashboards, first OPD plus imaging Queue, and the clinically validated Study/acquisition/quality workflow work in approved hosts; scoped SignalR reconnect/invalidation and API reconciliation pass | Dashboard + Queue + Realtime + Radiology | Rows 6–7, 14 and clinical workflows |
 | 17 | 70% | Published database templates, consent/preferences, provider adapters, signed callbacks/inbox, typed Worker delivery, retries/dead letters and status reconciliation work for approved channels | Messaging + Templates + Worker | Vendor approvals and row 4 |
 | 18 | 30% | All 45 primary layouts and 43 export variants are classified; accepted reports pass permissions/golden results and HTML/PDF/XLSX/CSV output; schedules/snapshots/retention pass; browser printing works and local-agent scope is either accepted or formally deferred | Reporting + DocumentService + Admin/Portal | Stable projections, owners and legacy samples |
 | 19 | 50% | Live database profile and signed mappings exist; repeatable staged ETL passes at least two rehearsals, count/money/relationship/workflow reconciliation, performance and rollback/cutover evidence | Data migration + module owners | Read-only schema and anonymized representative data |
-| 20 | 75% | CI covers unit/integration/architecture/contract/UI/security/load/device/migration checks as applicable; observability, audit, SBOM, backup/restore, DR, UAT, pilot and release evidence are accepted | QA + security + operations + product | All rows |
+| 20 | 81.25% | CI covers unit/integration/architecture/contract/UI/security/load/device/migration checks as applicable; observability, audit, SBOM, backup/restore, DR, UAT, pilot and release evidence are accepted | QA + security + operations + product | All rows |
 
 Row 2 is already at 100% and is maintained rather than reimplemented. Every other row has an explicit closure contract above.
 
@@ -241,7 +241,7 @@ Sessions requiring live data or business approval pause only their dependent tra
 
 ### Execution checkpoint — 2026-08-23
 
-[DOC-036](36-durable-messaging-reference-slice.md) completes durable outbound messaging, DOC-037–039 add communication management/preferences and Admin security, DOC-040/041 implement generalized Booking lifecycle, DOC-042/043 add the first X-ray/CT Queue and technician journey, DOC-044 adds capability dashboards, reception check-in and local migration proof, DOC-045 proves the browser journey, DOC-046 adds the Contract ledger, DOC-047 adds clinical history, DOC-048 gates signing with Practitioner eligibility, DOC-049 adds posted Invoice/Payment/allocation and snapshot evidence, and [DOC-050](50-portal-cashier-and-admin-billing-oversight.md) adds its first role-facing finance journey. Clinic/finance acceptance, specialty content, Employee/Payroll, tax/refund/automatic entitlement policy, reconciliation/close, reconnect/scale, OPD, bed occupancy, clinical orders/results, real providers and operational runbooks remain open.
+[DOC-036](36-durable-messaging-reference-slice.md) completes durable outbound messaging, DOC-037–039 add communication management/preferences and Admin security, DOC-040/041 implement generalized Booking lifecycle, DOC-042/043 add the first X-ray/CT Queue and technician journey, DOC-044 adds capability dashboards, reception check-in and local migration proof, DOC-045 proves the browser journey, DOC-046 adds the Contract ledger, DOC-047 adds clinical history, DOC-048 gates signing with Practitioner eligibility, DOC-049 adds posted Invoice/Payment/allocation and snapshot evidence, DOC-050 adds its first role-facing finance journey, DOC-057 controls the gated X-ray/CT policy, DOC-058 implements the Study/acquisition/technical-quality backend and [DOC-059](59-portal-radiology-execution-quality-workspace.md) proves the separate operator/reviewer Portal workflow in three authenticated sessions. Clinic/finance/radiology acceptance, specialty live-use approval, Employee/Payroll, tax/refund/automatic entitlement policy, reconciliation/close, Study realtime/reconnect/scale, OPD, bed occupancy, interpreted clinical results, real providers and operational runbooks remain open.
 
 ## Effort and schedule control
 

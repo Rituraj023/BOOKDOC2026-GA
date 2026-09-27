@@ -146,6 +146,9 @@ public static class InfrastructureRegistration
         services.AddScoped<IQueueRepository, QueueRepository>();
         services.AddScoped<IContractRepository, ContractRepository>();
         services.AddScoped<IEncounterRepository, EncounterRepository>();
+        services.AddScoped<IInvestigationRepository, InvestigationRepository>();
+        services.AddScoped<IRadiologyStudyRepository, RadiologyStudyRepository>();
+        services.AddScoped<IPhysiotherapyRepository, PhysiotherapyRepository>();
         services.AddScoped<IPractitionerRepository, PractitionerRepository>();
         services.AddScoped<IBillingRepository, BillingRepository>();
         services.AddScoped<ICommunicationRepository, CommunicationRepository>();

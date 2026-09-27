@@ -39,7 +39,7 @@ Questions 3–13 and 18–20 can block relevant pilot modules. Expansion and com
 
 ### Clinical and operational
 
-6. Which roles may register walk-ins, overbook, prioritize queues, amend signed notes, issue prescriptions and verify/release lab or radiology results?
+6. Which roles may register walk-ins, overbook, prioritize queues, amend signed notes and issue prescriptions? X-ray/CT operator, quality, interpretation, critical-communication and release decisions are decomposed as RAD-01 through RAD-24 in [DOC-057](57-xray-ct-execution-result-policy-decision-pack.md); lab policy remains separate.
 7. Is the first imaging scope scheduling/queue/status only, or does it include clinical reports and PACS/RIS exchange?
 8. Which bed use is required in clinic release: day-care chair, observation bed, procedure bed or advance inpatient reservation?
 9. Which current reports, receipt sizes, queue printers and label printers are actually active at pilot sites?

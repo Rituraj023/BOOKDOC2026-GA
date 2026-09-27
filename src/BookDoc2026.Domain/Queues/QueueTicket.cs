@@ -11,6 +11,7 @@ public sealed class QueueTicket : TenantScopedEntity
     public long ServicePointId { get; private set; }
     public long PatientId { get; private set; }
     public long? BookingId { get; private set; }
+    public long? InvestigationOrderId { get; private set; }
     public Guid RequestId { get; private set; }
     public string DisplayToken { get; private set; } = string.Empty;
     public QueuePriority Priority { get; private set; }
@@ -36,6 +37,40 @@ public sealed class QueueTicket : TenantScopedEntity
         if (tenantId <= 0 || branchId <= 0 || servicePointId <= 0 || patientId <= 0
             || requestId == Guid.Empty || !Enum.IsDefined(priority))
             throw new DomainRuleException("Queue ticket scope, patient or priority is invalid.");
+        return Create(tenantId, branchId, servicePointId, patientId, bookingId, null,
+            requestId, priority, now);
+    }
+
+    public static QueueTicket CheckInInvestigation(
+        long tenantId,
+        long branchId,
+        long servicePointId,
+        long patientId,
+        long investigationOrderId,
+        Guid requestId,
+        QueuePriority priority,
+        DateTimeOffset now)
+    {
+        if (investigationOrderId <= 0)
+            throw new DomainRuleException("An investigation order is required for this queue handoff.");
+        return Create(tenantId, branchId, servicePointId, patientId, null, investigationOrderId,
+            requestId, priority, now);
+    }
+
+    private static QueueTicket Create(
+        long tenantId,
+        long branchId,
+        long servicePointId,
+        long patientId,
+        long? bookingId,
+        long? investigationOrderId,
+        Guid requestId,
+        QueuePriority priority,
+        DateTimeOffset now)
+    {
+        if (tenantId <= 0 || branchId <= 0 || servicePointId <= 0 || patientId <= 0
+            || requestId == Guid.Empty || !Enum.IsDefined(priority))
+            throw new DomainRuleException("Queue ticket scope, patient or priority is invalid.");
         var ticket = new QueueTicket
         {
             TenantId = tenantId,
@@ -43,6 +78,7 @@ public sealed class QueueTicket : TenantScopedEntity
             ServicePointId = servicePointId,
             PatientId = patientId,
             BookingId = bookingId,
+            InvestigationOrderId = investigationOrderId,
             RequestId = requestId,
             Priority = priority,
             Status = QueueTicketStatus.Waiting,

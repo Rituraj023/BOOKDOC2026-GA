@@ -155,11 +155,23 @@ Indexes cover active worklist `(branch_id, service_point_id, operational_date, s
 | `clinical.procedure_record` | service/procedure performed, performer/time, outcome |
 | `clinical.prescription` / `prescription_version` | encounter/patient/prescriber, issued state/time, version/hash |
 | `clinical.prescription_item` | medication snapshot, dose/route/frequency/duration/quantity/instructions/status |
-| `clinical.investigation_order` / `order_item` | ordered tests, priority, status, requested time |
-| `clinical.result` | order item, status, value/interpretation, verified actor/time; documents remain in files service |
+| `clinical.investigation_order` | implemented signed-Encounter request for one configured catalog imaging service, with Patient, modality, indication, independent Order/Result state, idempotency, queue-handoff evidence and version |
+| `clinical.investigation_order_event` | implemented append-only request and Queue-link history with actor, optional Queue ticket and Order version |
+| `clinical.investigation_order_item` | future multi-item/lab expansion only; not required for the first single-service X-ray/CT order |
+| `clinical.result` | future order result/value/interpretation and verified actor/time; documents remain in files service and are not inferred from Queue completion |
 | `clinical.follow_up` | due date/interval, service/practitioner, status, resulting appointment |
+| `clinical.PhysiotherapyCarePlans` | implemented Patient/Service/signed-Encounter course root with lifecycle and optimistic version |
+| `clinical.PhysiotherapyCarePlanRevisions` | implemented append-only goals/frequency/interventions/precautions/review content, parent, reason and hash |
+| `clinical.PhysiotherapyTreatmentSessions` | implemented append-only signed-Encounter/Booking session narrative, sequence, adverse-event evidence and hash |
+| `clinical.PhysiotherapyOutcomeObservations` | implemented append-only dynamic measure/tool-version/context/value/unit/body/laterality evidence |
 
 Structured JSON is acceptable only for versioned specialty-template payloads with schema name/version and indexed promoted fields. Core identity, dates, status, author, diagnosis, medication, billing link, and audit data stay relational.
+
+The Physiotherapy foundation uses relational columns for its initial policy-neutral content and tenant query filters on all four tables. Composite tenant/branch foreign keys protect care-plan-owned history. The DbContext rejects modification/deletion of revisions, sessions and outcomes. Migration `20260828004550_PhysiotherapyAndInvestigationClinicalDelivery` is the implementation authority for these tables and the first Investigation/Queue bridge. It adds `clinical.investigation_order`, append-only `clinical.investigation_order_event`, nullable `queue.ticket.investigation_order_id`, tenant foreign keys and unique request/order/ticket/event indexes without rewriting existing permission seed rows. Final approved specialty and result/report policy may add versioned structures without replacing this history.
+
+The technician worklist remains a bounded module-owned query; it does not create a duplicate projection table or copy clinical text. Migration `20260828063245_RadiologyTechnicianWorklistPermission` appends `Investigations.Worklist.View` as role-claim IDs 133 and 134 only. Existing claim identifiers remain stable. A future persisted Radiology study/result model requires owner-approved acquisition, interpretation, verification, signing, amendment and release rules before schema work begins.
+
+[DOC-057](57-xray-ct-execution-result-policy-decision-pack.md) defines the additive Radiology model. [DOC-058](58-radiology-study-acquisition-quality-foundation.md) now implements `radiology.study`, append-only `radiology.study_event`, immutable `radiology.acquisition_attempt` and immutable `radiology.quality_review` through migration `20260828134611_RadiologyStudyExecutionFoundation`. Tenant-bearing foreign keys, protected public IDs, request/fingerprint uniqueness, optimistic Study versions and constrained modality/equipment relationships are enforced. Versioned reports/signatures, critical communication/acknowledgement, releases and DocumentService artifacts remain deferred to the later RAD decision groups. Queue rows, audit metadata and outbox messages never duplicate report narrative or become the system of record for a clinical state.
 
 ## Step 6 — Billing
 

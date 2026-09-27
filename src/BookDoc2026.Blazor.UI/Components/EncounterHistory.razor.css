@@ -1,0 +1,8 @@
+.encounter-history { display: grid; gap: .8rem; }
+.encounter-revision { padding: 1rem; border: 1px solid #dbe4eb; border-radius: 10px; background: #fbfdff; }
+.encounter-revision header { display: flex; justify-content: space-between; gap: 1rem; }
+.encounter-revision header span, .encounter-revision small { color: #64748b; }
+.encounter-revision dl { display: grid; grid-template-columns: minmax(130px, .25fr) 1fr; gap: .35rem .7rem; font-size: .86rem; }
+.encounter-revision dt { color: #64748b; font-weight: 700; }
+.encounter-revision dd { margin: 0; white-space: pre-wrap; }
+.amendment { padding: .45rem .6rem; background: #fefce8; border-radius: 6px; }

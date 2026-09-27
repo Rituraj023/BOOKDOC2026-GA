@@ -6,8 +6,11 @@ using BookDoc2026.Contracts.Security;
 using BookDoc2026.Domain.Foundation;
 using BookDoc2026.Domain.Identity;
 using BookDoc2026.Domain.Patients;
+using BookDoc2026.Domain.Catalog;
 using BookDoc2026.Domain.Queues;
+using BookDoc2026.Domain.Scheduling;
 using BookDoc2026.Domain.Stakeholders;
+using BookDoc2026.Domain.Workforce;
 using BookDoc2026.Infrastructure;
 using BookDoc2026.Infrastructure.Context;
 using BookDoc2026.Infrastructure.Data;
@@ -24,8 +27,13 @@ const string confirmationText = "MANAGE_BOOKDOC_DEVELOPMENT_BROWSER_FIXTURES";
 const string tenantSlug = "bookdoc-browser-fixture";
 const string receptionEmail = "reception.browser@bookdoc.invalid";
 const string technicianEmail = "technician.browser@bookdoc.invalid";
+const string reviewerEmail = "radiology.reviewer.browser@bookdoc.invalid";
+const string clinicianEmail = "clinician.browser@bookdoc.invalid";
+const string unassignedClinicianEmail = "unassigned.clinician.browser@bookdoc.invalid";
 const string receptionRole = "DevelopmentBrowserReception";
 const string technicianRole = "DevelopmentBrowserTechnician";
+const string reviewerRole = "DevelopmentBrowserRadiologyReviewer";
+const string clinicianRole = "DevelopmentBrowserClinician";
 
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
@@ -77,7 +85,10 @@ static async Task<int> CreateAsync(
 {
     if (await db.Tenants.IgnoreQueryFilters().AnyAsync(tenant => tenant.Slug == tenantSlug)
         || await users.FindByEmailAsync(receptionEmail) is not null
-        || await users.FindByEmailAsync(technicianEmail) is not null)
+        || await users.FindByEmailAsync(technicianEmail) is not null
+        || await users.FindByEmailAsync(reviewerEmail) is not null
+        || await users.FindByEmailAsync(clinicianEmail) is not null
+        || await users.FindByEmailAsync(unassignedClinicianEmail) is not null)
         return Fail("Browser fixtures already exist. Run the remove action before recreating them.");
 
     try
@@ -108,21 +119,156 @@ static async Task<int> CreateAsync(
                 FoundationPermissions.PatientsSearch,
                 FoundationPermissions.QueuesCheckIn);
             await EnsureRoleAsync(roles, technicianRole,
-                FoundationPermissions.QueuesView,
+                FoundationPermissions.InvestigationWorklistView,
+                FoundationPermissions.RadiologyStudiesView,
+                FoundationPermissions.RadiologyStudiesStart,
+                FoundationPermissions.RadiologyAcquisitionsRecord,
                 FoundationPermissions.QueuesCall,
                 FoundationPermissions.QueuesProgress,
                 FoundationPermissions.QueuesCancel,
                 FoundationPermissions.QueuesDisplayView);
+            await EnsureRoleAsync(roles, reviewerRole,
+                FoundationPermissions.InvestigationWorklistView,
+                FoundationPermissions.RadiologyStudiesView,
+                FoundationPermissions.RadiologyStudiesQualityReview);
+            await EnsureRoleAsync(roles, clinicianRole,
+                FoundationPermissions.EncountersView,
+                FoundationPermissions.EncounterDraftsManage,
+                FoundationPermissions.EncountersSign,
+                FoundationPermissions.CatalogView,
+                FoundationPermissions.InvestigationsView,
+                FoundationPermissions.InvestigationOrdersCreate,
+                FoundationPermissions.InvestigationQueueHandoff,
+                FoundationPermissions.QueuesCheckIn,
+                FoundationPermissions.PhysiotherapyCarePlansView,
+                FoundationPermissions.PhysiotherapyCarePlansManage,
+                FoundationPermissions.PhysiotherapySessionsRecord,
+                FoundationPermissions.PhysiotherapyOutcomesRecord);
 
             await CreateUserAsync(db, users, receptionEmail, "Browser Reception", receptionRole, password,
                 tenant.Id, organization.Id, branch.Id, now);
-            await CreateUserAsync(db, users, technicianEmail, "Browser Technician", technicianRole, password,
+            var technician = await CreateUserAsync(db, users, technicianEmail, "Browser Radiology Operator",
+                technicianRole, password,
                 tenant.Id, organization.Id, branch.Id, now);
+            var reviewer = await CreateUserAsync(db, users, reviewerEmail, "Browser Quality Reviewer",
+                reviewerRole, password, tenant.Id, organization.Id, branch.Id, now);
+            var clinician = await CreateUserAsync(db, users, clinicianEmail, "Browser Physiotherapist",
+                clinicianRole, password, tenant.Id, organization.Id, branch.Id, now);
+            await CreateUserAsync(db, users, unassignedClinicianEmail, "Browser Unassigned Clinician",
+                clinicianRole, password, tenant.Id, organization.Id, branch.Id, now);
+
+            var clinicianStakeholder = Stakeholder.CreatePerson(tenant.Id, "Browser Physiotherapist", now);
+            var clinicianPerson = StakeholderPerson.Create(tenant.Id, clinicianStakeholder.Id, null, "Browser",
+                null, "Physiotherapist", new DateOnly(1988, 6, 10), false, AdministrativeSex.Female, now);
+            var operatorStakeholder = Stakeholder.CreatePerson(tenant.Id, "Browser Radiology Operator", now);
+            var operatorPerson = StakeholderPerson.Create(tenant.Id, operatorStakeholder.Id, null, "Browser",
+                null, "Radiology Operator", new DateOnly(1989, 4, 12), false, AdministrativeSex.Female, now);
+            var reviewerStakeholder = Stakeholder.CreatePerson(tenant.Id, "Browser Quality Reviewer", now);
+            var reviewerPerson = StakeholderPerson.Create(tenant.Id, reviewerStakeholder.Id, null, "Browser",
+                null, "Quality Reviewer", new DateOnly(1984, 9, 8), false, AdministrativeSex.Male, now);
+            var service = ClinicalService.Create(tenant.Id, "PHY-BROWSER", "Browser Physiotherapy Assessment",
+                "Synthetic browser acceptance service", 45, now);
+            var investigationService = ClinicalService.Create(tenant.Id, "XR-KNEE-BROWSER", "Browser Knee X-ray",
+                "Synthetic X-ray order service", 15, now);
+            var resourceCategory = ResourceCategory.Create(tenant.Id, null, "PHY-PRACTITIONER",
+                "Physiotherapy practitioners", ResourceKind.Practitioner, now);
+            var imagingCategory = ResourceCategory.Create(tenant.Id, null, "XRAY",
+                "X-ray imaging modality", ResourceKind.ImagingModality, now);
+            var ctImagingCategory = ResourceCategory.Create(tenant.Id, null, "CT",
+                "CT imaging modality", ResourceKind.ImagingModality, now);
+            db.AddRange(clinicianStakeholder, clinicianPerson, operatorStakeholder, operatorPerson,
+                reviewerStakeholder, reviewerPerson, service, investigationService, resourceCategory,
+                imagingCategory, ctImagingCategory);
+            await db.SaveChangesAsync();
+
+            var investigationRequirement = ServiceResourceRequirement.Create(tenant.Id,
+                investigationService.Id, imagingCategory.Id, "PRIMARY-MODALITY", 1, false, now);
+            db.Add(investigationRequirement);
+            await db.SaveChangesAsync();
+
+            var resource = BookableResource.Create(tenant.Id, branch.Id, resourceCategory.Id, "PHY-BROWSER-01",
+                "Browser Physiotherapist Resource", CapacityMode.Exclusive, 1, "Asia/Kolkata", null, now);
+            var xrayEquipment = BookableResource.Create(tenant.Id, branch.Id, imagingCategory.Id,
+                "XR-BROWSER-01", "Browser X-ray Machine", CapacityMode.Exclusive, 1, "Asia/Kolkata", null, now);
+            var ctEquipment = BookableResource.Create(tenant.Id, branch.Id, ctImagingCategory.Id,
+                "CT-BROWSER-01", "Browser CT Machine", CapacityMode.Exclusive, 1, "Asia/Kolkata", null, now);
+            var practitioner = PractitionerProfile.Create(tenant.Id, clinicianStakeholder.Id, clinician.Id,
+                "PHY-BROWSER-01", "PHYSIOTHERAPIST", now);
+            var operatorPractitioner = PractitionerProfile.Create(tenant.Id, operatorStakeholder.Id,
+                technician.Id, "XR-OPERATOR-01", "RADIOLOGY_TECHNICIAN", now);
+            var reviewerPractitioner = PractitionerProfile.Create(tenant.Id, reviewerStakeholder.Id,
+                reviewer.Id, "XR-REVIEWER-01", "RADIOLOGY_REVIEWER", now);
+            db.AddRange(resource, xrayEquipment, ctEquipment, practitioner, operatorPractitioner,
+                reviewerPractitioner);
+            await db.SaveChangesAsync();
+
+            var credential = PractitionerCredential.Create(tenant.Id, practitioner.Id, "PHYSIOTHERAPY",
+                "BROWSER-REGISTRATION-01", "Synthetic Browser Credential Authority",
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(-1),
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(1), now);
+            credential.Verify(credential.Version, clinician.Id, now);
+            practitioner.Activate(practitioner.Version, credential.IsCurrent(DateOnly.FromDateTime(now.UtcDateTime)), now);
+            var assignment = PractitionerAssignment.Create(tenant.Id, practitioner.Id, branch.Id, service.Id,
+                resource.Id, "PRIMARY", DateOnly.FromDateTime(now.UtcDateTime).AddYears(-1), null, now);
+            var operatorCredential = PractitionerCredential.Create(tenant.Id, operatorPractitioner.Id,
+                "XRAY_TECH", "BROWSER-XR-OPERATOR-01", "Synthetic Browser Credential Authority",
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(-1),
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(1), now);
+            operatorCredential.Verify(operatorCredential.Version, clinician.Id, now);
+            operatorPractitioner.Activate(operatorPractitioner.Version,
+                operatorCredential.IsCurrent(DateOnly.FromDateTime(now.UtcDateTime)), now);
+            var operatorAssignment = PractitionerAssignment.Create(tenant.Id, operatorPractitioner.Id,
+                branch.Id, investigationService.Id, null, "PERFORMING",
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(-1), null, now);
+            var reviewerCredential = PractitionerCredential.Create(tenant.Id, reviewerPractitioner.Id,
+                "XRAY_QA", "BROWSER-XR-REVIEWER-01", "Synthetic Browser Credential Authority",
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(-1),
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(1), now);
+            reviewerCredential.Verify(reviewerCredential.Version, clinician.Id, now);
+            reviewerPractitioner.Activate(reviewerPractitioner.Version,
+                reviewerCredential.IsCurrent(DateOnly.FromDateTime(now.UtcDateTime)), now);
+            var reviewerAssignment = PractitionerAssignment.Create(tenant.Id, reviewerPractitioner.Id,
+                branch.Id, investigationService.Id, null, "QUALITY_REVIEW",
+                DateOnly.FromDateTime(now.UtcDateTime).AddYears(-1), null, now);
+            var xrayCapability = ResourceCapability.Create(tenant.Id, xrayEquipment.Id,
+                investigationService.Id, null, 1, now);
+            var ctCapability = ResourceCapability.Create(tenant.Id, ctEquipment.Id,
+                investigationService.Id, null, 1, now);
+            db.AddRange(credential, assignment, operatorCredential, operatorAssignment, reviewerCredential,
+                reviewerAssignment, xrayCapability, ctCapability);
+            await db.SaveChangesAsync();
+
+            var india = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
+            var localBookingDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, india).DateTime).AddDays(1);
+            var localStart = localBookingDate.ToDateTime(new TimeOnly(10, 0), DateTimeKind.Unspecified);
+            var startUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localStart, india), TimeSpan.Zero);
+            var endUtc = startUtc.AddMinutes(service.DefaultDurationMinutes);
+            var bookingHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+                "BOOKDOC-BROWSER-FIXTURE-CLINICAL-BOOKING")));
+            var hold = SchedulingHold.Create(tenant.Id, branch.Id, patient.Id, service.Id, Guid.NewGuid(),
+                bookingHash, startUtc, endUtc, now.AddMinutes(20), now);
+            db.SchedulingHolds.Add(hold);
+            await db.SaveChangesAsync();
+            var reservation = ResourceReservation.Create(tenant.Id, branch.Id, hold.Id, resource.Id,
+                startUtc, endUtc, 1, now, "PRIMARY");
+            db.ResourceReservations.Add(reservation);
+            await db.SaveChangesAsync();
+            var booking = Booking.Confirm(hold, now);
+            hold.Confirm(hold.Version, now);
+            db.Bookings.Add(booking);
+            await db.SaveChangesAsync();
+            db.BookingResourceAllocations.Add(BookingResourceAllocation.FromReservation(booking, reservation, now));
+            await db.SaveChangesAsync();
 
             await transaction.CommitAsync();
             Console.WriteLine("Development browser fixtures created.");
             Console.WriteLine($"Reception user: {receptionEmail}");
             Console.WriteLine($"Technician user: {technicianEmail}");
+            Console.WriteLine($"Independent quality-reviewer user: {reviewerEmail}");
+            Console.WriteLine($"Assigned clinician user: {clinicianEmail}");
+            Console.WriteLine($"Unassigned clinician user: {unassignedClinicianEmail}");
+            Console.WriteLine($"Synthetic clinical agenda date: {localBookingDate:yyyy-MM-dd}");
+            Console.WriteLine("Synthetic investigation destination: XR-BROWSER / Browser Test X-ray");
             Console.WriteLine("Synthetic patient search: Aarav Browser Patient or 9876");
             Console.WriteLine("Run the explicit remove action after browser validation.");
             return 0;
@@ -150,10 +296,35 @@ static async Task<int> RemoveAsync(BookDocDbContext db)
             else
             {
                 var tenantId = tenant.Id;
+                await db.RadiologyQualityReviews.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.RadiologyStudyEvents.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.RadiologyAcquisitionAttempts.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.RadiologyStudies.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.InvestigationOrderEvents.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PhysiotherapyOutcomeObservations.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PhysiotherapyTreatmentSessions.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PhysiotherapyCarePlanRevisions.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PhysiotherapyCarePlans.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.QueueTicketEvents.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.QueueTickets.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.InvestigationOrders.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.EncounterRevisions.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ClinicalEncounters.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.ImagingServicePoints.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.AuditEvents.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.BookingResourceAllocations.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.Bookings.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ResourceReservations.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.SchedulingHolds.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PractitionerAssignments.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PractitionerCredentials.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.PractitionerProfiles.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ResourceStatusEvents.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ResourceCapabilities.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ServiceResourceRequirements.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.BookableResources.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ResourceCategories.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
+                await db.ClinicalServices.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.Patients.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.StakeholderContactPoints.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
                 await db.StakeholderPersons.IgnoreQueryFilters().Where(item => item.TenantId == tenantId).ExecuteDeleteAsync();
@@ -166,7 +337,9 @@ static async Task<int> RemoveAsync(BookDocDbContext db)
                 Console.WriteLine("Development browser fixture tenant data removed.");
             }
 
-            var normalizedEmails = new[] { receptionEmail.ToUpperInvariant(), technicianEmail.ToUpperInvariant() };
+            var normalizedEmails = new[] { receptionEmail.ToUpperInvariant(), technicianEmail.ToUpperInvariant(),
+                reviewerEmail.ToUpperInvariant(),
+                clinicianEmail.ToUpperInvariant(), unassignedClinicianEmail.ToUpperInvariant() };
             var userIds = await db.Users
                 .Where(user => user.NormalizedEmail != null && normalizedEmails.Contains(user.NormalizedEmail))
                 .Select(user => user.Id)
@@ -177,7 +350,9 @@ static async Task<int> RemoveAsync(BookDocDbContext db)
             await db.Set<ApplicationUserRole>().Where(item => userIds.Contains(item.UserId)).ExecuteDeleteAsync();
             await db.Users.Where(user => userIds.Contains(user.Id)).ExecuteDeleteAsync();
 
-            var normalizedRoles = new[] { receptionRole.ToUpperInvariant(), technicianRole.ToUpperInvariant() };
+            var normalizedRoles = new[] { receptionRole.ToUpperInvariant(), technicianRole.ToUpperInvariant(),
+                reviewerRole.ToUpperInvariant(),
+                clinicianRole.ToUpperInvariant() };
             var roleIds = await db.Roles
                 .Where(role => role.NormalizedName != null && normalizedRoles.Contains(role.NormalizedName))
                 .Select(role => role.Id)
@@ -203,7 +378,7 @@ static async Task EnsureRoleAsync(RoleManager<ApplicationRole> roles, string nam
         Ensure(await roles.AddClaimAsync(role, new Claim(BookDocClaimTypes.Permission, permission)));
 }
 
-static async Task CreateUserAsync(
+static async Task<ApplicationUser> CreateUserAsync(
     BookDocDbContext db,
     UserManager<ApplicationUser> users,
     string email,
@@ -229,6 +404,7 @@ static async Task CreateUserAsync(
     Ensure(await users.AddToRoleAsync(user, role));
     db.UserScopes.Add(ApplicationUserScope.Create(user.Id, tenantId, organizationId, branchId, true, now));
     await db.SaveChangesAsync();
+    return user;
 }
 
 static void Ensure(IdentityResult result)

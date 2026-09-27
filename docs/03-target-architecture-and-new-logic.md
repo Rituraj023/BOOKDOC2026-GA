@@ -70,6 +70,12 @@ Contracts <- Client        API composition
 | Nursing/Lab/Pharmacy/OT/Emergency/Insurance | their own workflows and tables | Future | Hospital |
 | Workforce/Payroll integration | external employee/payroll ownership map and adapters | Deferred until source supplied | Organization/clinical scheduling |
 
+The first cross-module Clinical-to-Queue bridge is implemented in [DOC-055](55-encounter-investigation-order-imaging-queue-handoff.md). A signed Encounter requests only a Catalog Service configured with a required X-ray/CT imaging-modality category, then atomically creates one matching Queue ticket. Clinical Order, future Result and operational Queue status remain separate; Queue/SignalR never performs or verifies a clinical result.
+
+[DOC-056](56-radiology-technician-ordered-worklist.md) adds the read-side bridge for technicians without creating a Radiology data silo. `Investigations.Worklist.View` authorizes a bounded active-order projection over existing Clinical, Queue, Patient/Stakeholder, Catalog and Encounter truth. Generic Queue visibility and individual Queue commands remain separately permissioned; the projection copies no Encounter narrative or result/document content.
+
+[DOC-057](57-xray-ct-execution-result-policy-decision-pack.md) defines the complete gated boundary. [DOC-058](58-radiology-study-acquisition-quality-foundation.md) implements its first backend slice and [DOC-059](59-portal-radiology-execution-quality-workspace.md) proves the separate eligible-operator and independent-reviewer Portal journey: Queue, Order and Study/acquisition/technical-quality remain independent state/evidence streams with matching equipment and immutable history. Report versions, critical communication, clinical/patient release and immutable snapshots remain absent. Raw DICOM images remain in an approved PACS/VNA; DocumentService renders future signed snapshots but owns neither clinical truth nor release policy. RAD-01 through RAD-09 have provisional product-development approval and still require named Delhi clinical/radiology/compliance validation before tenant live use; RAD-10 through RAD-24 remain pending.
+
 ## Standard vertical slice
 
 Every non-trivial use case contains:
@@ -178,8 +184,13 @@ Example resource/action permissions:
 - `Billing.Invoice`, `Billing.DiscountApprove`, `Billing.Receive`, `Billing.Refund`, `Billing.CloseDay`
 - `Documents.View`, `Documents.Upload`, `Documents.Delete`
 - `Audit.View`, `Users.Manage`, `Roles.Manage`, `Reports.Export`
+- `Physiotherapy.CarePlans.View`, `Physiotherapy.CarePlans.Manage`, `Physiotherapy.Sessions.Record`, `Physiotherapy.Outcomes.Record`
 
 Authorization tests must combine role permission and durable scope. A valid token with a forged branch header must fail.
+
+### Physiotherapy clinical-delivery boundary
+
+The implemented policy-neutral specialty module composes through API/Application/Domain/Infrastructure and the shared Contracts/Client boundary. A signed `PHYSIOTHERAPY` Encounter plus active verified branch/service Practitioner eligibility anchors a versioned care plan. Care-plan revisions, treatment sessions and dynamic outcome observations preserve append-only clinical history; audit carries identifiers/hashes rather than clinical narrative. Approved assessment templates, protocols, outcome catalogs, red-flag rules and countersigning remain configuration/policy work governed by [DOC-024](24-physiotherapy-orthopaedics-preparation.md) and are not inferred in code. Full implementation evidence is in [DOC-051](51-physiotherapy-clinical-delivery-foundation.md).
 
 ### Concurrency and idempotency
 

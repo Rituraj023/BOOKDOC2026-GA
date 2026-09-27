@@ -1,0 +1,31 @@
+@if (Items.Count == 0)
+{
+    <p class="agenda-empty">No confirmed assigned bookings are available for this date.</p>
+}
+else
+{
+    <div class="agenda-wrap">
+        <table class="agenda-table">
+            <thead><tr><th>Time</th><th>Patient</th><th>Service</th><th>Encounter</th><th>Care plan</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var item in Items)
+            {
+                <tr class="@(item.BookingNumber == SelectedBookingNumber ? "selected" : null)">
+                    <td><strong>@item.StartUtc.ToLocalTime().ToString("t")</strong><small>@item.EndUtc.ToLocalTime().ToString("t")</small></td>
+                    <td><strong>@item.PatientDisplayName</strong><small>@item.PatientNumber</small></td>
+                    <td>@item.ServiceName<small>@item.ServiceCode</small></td>
+                    <td>@(item.EncounterStatus ?? "Not started")<small>@(item.EncounterNumber ?? "—")</small></td>
+                    <td>@(item.CarePlanStatus ?? "—")<small>@(item.CarePlanNumber ?? "No linked/open plan")</small></td>
+                    <td><button type="button" @onclick="() => Select.InvokeAsync(item)">Open</button></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ClinicalAgendaItemResponse> Items { get; set; } = [];
+    [Parameter] public string? SelectedBookingNumber { get; set; }
+    [Parameter] public EventCallback<ClinicalAgendaItemResponse> Select { get; set; }
+}

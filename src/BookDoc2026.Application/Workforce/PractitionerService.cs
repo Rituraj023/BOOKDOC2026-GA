@@ -149,6 +149,15 @@ public sealed class PractitionerService(
             throw new ForbiddenException("The actor is not an active, currently credentialed practitioner assigned to this branch and service.");
     }
 
+    public async Task EnsureEligiblePerformerAsync(long identitySubjectId, long branchId, long serviceId,
+        DateOnly date, CancellationToken cancellationToken)
+    {
+        if (!await repository.HasEligibleSignerAsync(identitySubjectId, branchId, serviceId, date,
+                cancellationToken))
+            throw new ForbiddenException(
+                "The actor is not an active, currently credentialed practitioner assigned to this branch and service.");
+    }
+
     private async Task<PractitionerResponse> ChangeProfileAsync(long branchId, long practitionerId,
         ChangePractitionerStatusRequest request, string action,
         Action<PractitionerAggregate, DateTimeOffset, DateOnly> transition, CancellationToken cancellationToken)

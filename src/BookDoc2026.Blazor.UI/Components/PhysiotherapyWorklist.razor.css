@@ -1,0 +1,7 @@
+.worklist-wrap { overflow-x: auto; }
+.worklist-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.worklist-table th, .worklist-table td { padding: .75rem .65rem; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+.worklist-table th { color: #64748b; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.worklist-table tr.selected { background: #ecfeff; }
+.worklist-table td small { display: block; margin-top: .2rem; color: #64748b; }
+.worklist-empty { color: #64748b; }

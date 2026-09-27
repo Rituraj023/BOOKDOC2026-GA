@@ -1,0 +1,270 @@
+@page "/physiotherapy"
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject PortalSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Physiotherapy | BOOKDOC2026 Portal</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to access Physiotherapy care delivery.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanView)
+{
+    <section class="panel"><h1>Access not granted</h1><p>The Physiotherapy care-plan view permission is required.</p></section>
+}
+else
+{
+    <div class="page-heading"><div><p class="eyebrow">Clinical / Physiotherapy</p><h1>Physiotherapist workspace</h1><p>Care-plan history, signed treatment sessions and outcome observations remain authoritative in the API.</p></div><ScopeBadge Label="Branch scoped" /></div>
+
+    <section class="panel selector-panel physio-filter">
+        <label>Find patient or care plan<input @bind="search" @bind:event="oninput" placeholder="Patient name, number or care-plan number" /></label>
+        <label>Status<select @bind="statusFilter"><option value="">All statuses</option><option>Active</option><option>Draft</option><option>Completed</option><option>Discontinued</option></select></label>
+        <button type="button" @onclick="LoadWorklistAsync" disabled="@busy">Refresh</button>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice @(isError ? "error-notice" : null)" aria-live="polite">@message</p> }
+
+    <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow">Branch worklist</p><h2>Care plans</h2></div><span class="muted">@FilteredWorklist.Count shown · maximum 100 recent plans</span></div>
+        <PhysiotherapyWorklist Items="FilteredWorklist" SelectedCarePlanNumber="@selected?.CarePlanNumber" Select="OpenPlanAsync" />
+    </section>
+
+    @if (CanManage)
+    {
+        <details class="panel clinical-command" open="@(worklist.Count == 0)">
+            <summary><strong>Start care plan from signed Physiotherapy Encounter</strong></summary>
+            <div class="form-grid physio-grid">
+                <label>Protected initial Encounter ID<input @bind="createEncounterId" @bind:event="oninput" /></label>
+                <label>Review date (optional)<input type="date" @bind="createReviewOn" /></label>
+                <label class="wide">Goal summary<textarea @bind="createGoals" @bind:event="oninput"></textarea></label>
+                <label>Frequency and duration<textarea @bind="createFrequency" @bind:event="oninput"></textarea></label>
+                <label>Planned interventions<textarea @bind="createInterventions" @bind:event="oninput"></textarea></label>
+                <label class="wide">Precautions (optional)<textarea @bind="createPrecautions" @bind:event="oninput"></textarea></label>
+            </div>
+            <p class="muted">Only an already signed Encounter with specialty code PHYSIOTHERAPY can start a plan.</p>
+            <button class="primary" type="button" @onclick="CreateAsync" disabled="@(busy || !CanSubmitCreate)">Create draft care plan</button>
+        </details>
+    }
+
+    @if (selected is not null)
+    {
+        <section class="panel clinical-plan-heading">
+            <div class="section-heading"><div><p class="eyebrow">@selected.CarePlanNumber</p><h2>Selected care plan</h2></div><PhysiotherapyStatusBadge Status="@selected.Status" /></div>
+            <div class="clinical-metadata"><span>Patient <strong>@SelectedSummary?.PatientDisplayName</strong></span><span>@SelectedSummary?.PatientNumber</span><span>Revision @selected.LatestRevisionNumber</span><span>Version @selected.Version</span></div>
+            @if (CanManage && selected.Status == "Draft") { <button class="primary" type="button" @onclick="ActivateAsync" disabled="@busy">Activate plan</button> }
+        </section>
+
+        @if (CanManage && selected.Status is "Draft" or "Active")
+        {
+            <details class="panel clinical-command">
+                <summary><strong>Append care-plan revision</strong></summary>
+                <div class="form-grid physio-grid">
+                    <label class="wide">Change reason @(selected.Status == "Active" ? "(required)" : "(optional)")<input @bind="revisionReason" @bind:event="oninput" /></label>
+                    <label class="wide">Goal summary<textarea @bind="revisionGoals" @bind:event="oninput"></textarea></label>
+                    <label>Frequency and duration<textarea @bind="revisionFrequency" @bind:event="oninput"></textarea></label>
+                    <label>Planned interventions<textarea @bind="revisionInterventions" @bind:event="oninput"></textarea></label>
+                    <label class="wide">Precautions (optional)<textarea @bind="revisionPrecautions" @bind:event="oninput"></textarea></label>
+                    <label>Review date (optional)<input type="date" @bind="revisionReviewOn" /></label>
+                </div>
+                <button class="primary" type="button" @onclick="ReviseAsync" disabled="@(busy || !CanSubmitRevision)">Append revision</button>
+            </details>
+        }
+
+        @if (CanRecordSession && selected.Status == "Active")
+        {
+            <details class="panel clinical-command">
+                <summary><strong>Record signed treatment session</strong></summary>
+                <div class="form-grid physio-grid">
+                    <label class="wide">Protected signed treatment Encounter ID<input @bind="sessionEncounterId" @bind:event="oninput" /></label>
+                    <label>Subjective response<textarea @bind="sessionSubjective" @bind:event="oninput"></textarea></label>
+                    <label>Interventions performed<textarea @bind="sessionInterventions" @bind:event="oninput"></textarea></label>
+                    <label>Tolerance<textarea @bind="sessionTolerance" @bind:event="oninput"></textarea></label>
+                    <label>Next plan<textarea @bind="sessionNextPlan" @bind:event="oninput"></textarea></label>
+                    <label class="checkbox-label"><input type="checkbox" @bind="sessionHadAdverseEvent" /> Adverse event occurred</label>
+                    @if (sessionHadAdverseEvent) { <label class="wide">Adverse-event details<textarea @bind="sessionAdverseDetails" @bind:event="oninput"></textarea></label> }
+                </div>
+                <button class="primary" type="button" @onclick="RecordSessionAsync" disabled="@(busy || !CanSubmitSession)">Record immutable session</button>
+            </details>
+        }
+
+        @if (CanRecordOutcome && selected.Status is "Draft" or "Active")
+        {
+            <details class="panel clinical-command">
+                <summary><strong>Record dynamic outcome observation</strong></summary>
+                <p class="muted">Use only clinic-approved measure codes, tool versions and units. Values are grouped only when code, version, unit, body site and laterality match.</p>
+                <div class="form-grid outcome-grid">
+                    <label>Session (optional)<select @bind="outcomeSessionId"><option value="">Care-plan level</option>@foreach (var item in selected.Sessions) { <option value="@item.Id">Session @item.SequenceNumber · @item.PerformedUtc.ToLocalTime().ToString("g")</option> }</select></label>
+                    <label>Context code<input @bind="outcomeContext" @bind:event="oninput" placeholder="Clinic-approved code" /></label>
+                    <label>Measure code<input @bind="outcomeMeasure" @bind:event="oninput" placeholder="Clinic-approved code" /></label>
+                    <label>Tool version<input @bind="outcomeToolVersion" @bind:event="oninput" /></label>
+                    <label>Value<input type="number" step="0.0001" @bind="outcomeValue" /></label>
+                    <label>Unit<input @bind="outcomeUnit" @bind:event="oninput" /></label>
+                    <label>Body site (optional)<input @bind="outcomeBodySite" @bind:event="oninput" /></label>
+                    <label>Laterality code (optional)<input @bind="outcomeLaterality" @bind:event="oninput" /></label>
+                    <label>Observed local time<input type="datetime-local" @bind="outcomeObservedLocal" /></label>
+                </div>
+                <button class="primary" type="button" @onclick="RecordOutcomeAsync" disabled="@(busy || !CanSubmitOutcome)">Record immutable outcome</button>
+            </details>
+        }
+
+        @if (CanManage && selected.Status == "Active")
+        {
+            <details class="panel clinical-command danger-zone">
+                <summary><strong>Close care plan</strong></summary>
+                <label>Required closure reason<textarea @bind="closureReason" @bind:event="oninput"></textarea></label>
+                <div class="command-row"><button type="button" @onclick="() => CloseAsync(false)" disabled="@(busy || string.IsNullOrWhiteSpace(closureReason))">Complete</button><button type="button" @onclick="() => CloseAsync(true)" disabled="@(busy || string.IsNullOrWhiteSpace(closureReason))">Discontinue</button></div>
+            </details>
+        }
+
+        <section class="panel"><div class="section-heading"><div><p class="eyebrow">Immutable history</p><h2>Clinical course</h2></div><span class="muted">Narrative is shown only in this authorized clinical view</span></div><PhysiotherapyHistory Plan="selected" /></section>
+    }
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "encounterId")] public string? HandoffEncounterId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "carePlanId")] public string? HandoffCarePlanId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "sessionEncounterId")] public string? HandoffSessionEncounterId { get; set; }
+    private readonly List<PhysiotherapyCarePlanListItemResponse> worklist = [];
+    private PhysiotherapyCarePlanResponse? selected;
+    private string branchId = string.Empty, search = string.Empty, statusFilter = string.Empty;
+    private string createEncounterId = string.Empty, createGoals = string.Empty, createFrequency = string.Empty,
+        createInterventions = string.Empty, createPrecautions = string.Empty;
+    private DateOnly? createReviewOn;
+    private string revisionGoals = string.Empty, revisionFrequency = string.Empty, revisionInterventions = string.Empty,
+        revisionPrecautions = string.Empty, revisionReason = string.Empty;
+    private DateOnly? revisionReviewOn;
+    private string sessionEncounterId = string.Empty, sessionSubjective = string.Empty,
+        sessionInterventions = string.Empty, sessionTolerance = string.Empty, sessionNextPlan = string.Empty,
+        sessionAdverseDetails = string.Empty;
+    private bool sessionHadAdverseEvent;
+    private string outcomeSessionId = string.Empty, outcomeContext = string.Empty, outcomeMeasure = string.Empty,
+        outcomeToolVersion = string.Empty, outcomeUnit = string.Empty, outcomeBodySite = string.Empty,
+        outcomeLaterality = string.Empty;
+    private decimal outcomeValue;
+    private DateTime outcomeObservedLocal = DateTime.Now;
+    private string closureReason = string.Empty;
+    private string? message;
+    private bool busy, isError;
+
+    private bool CanView => Session.HasPermission(FoundationPermissions.PhysiotherapyCarePlansView);
+    private bool CanManage => Session.HasPermission(FoundationPermissions.PhysiotherapyCarePlansManage);
+    private bool CanRecordSession => Session.HasPermission(FoundationPermissions.PhysiotherapySessionsRecord);
+    private bool CanRecordOutcome => Session.HasPermission(FoundationPermissions.PhysiotherapyOutcomesRecord);
+    private bool CanSubmitCreate => Required(createEncounterId, createGoals, createFrequency, createInterventions);
+    private bool CanSubmitRevision => Required(revisionGoals, revisionFrequency, revisionInterventions)
+        && (selected?.Status != "Active" || !string.IsNullOrWhiteSpace(revisionReason));
+    private bool CanSubmitSession => Required(sessionEncounterId, sessionSubjective, sessionInterventions,
+        sessionTolerance, sessionNextPlan) && (!sessionHadAdverseEvent || !string.IsNullOrWhiteSpace(sessionAdverseDetails));
+    private bool CanSubmitOutcome => Required(outcomeContext, outcomeMeasure, outcomeToolVersion, outcomeUnit);
+    private PhysiotherapyCarePlanListItemResponse? SelectedSummary => worklist.SingleOrDefault(
+        item => item.CarePlanNumber == selected?.CarePlanNumber);
+    private IReadOnlyList<PhysiotherapyCarePlanListItemResponse> FilteredWorklist => worklist
+        .Where(item => string.IsNullOrWhiteSpace(statusFilter) || item.Status == statusFilter)
+        .Where(item => string.IsNullOrWhiteSpace(search) || new[] { item.PatientDisplayName, item.PatientNumber, item.CarePlanNumber }
+            .Any(value => value.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)))
+        .ToArray();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated || !CanView) return;
+        branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(branchId)) { Fail("Select a branch scope when signing in."); return; }
+        await LoadWorklistAsync();
+        if (!string.IsNullOrWhiteSpace(HandoffCarePlanId))
+        {
+            await OpenPlanAsync(HandoffCarePlanId);
+            sessionEncounterId = HandoffSessionEncounterId ?? string.Empty;
+        }
+        else if (!string.IsNullOrWhiteSpace(HandoffEncounterId)) createEncounterId = HandoffEncounterId;
+    }
+
+    private Task LoadWorklistAsync() => RunAsync(async () =>
+    {
+        var selectedNumber = selected?.CarePlanNumber;
+        worklist.Clear();
+        worklist.AddRange(await Api.ListPhysiotherapyCarePlansAsync(branchId, 100));
+        if (selectedNumber is not null && worklist.All(item => item.CarePlanNumber != selectedNumber)) selected = null;
+    });
+
+    private Task OpenPlanAsync(string carePlanId) => RunAsync(async () =>
+    {
+        selected = await Api.GetPhysiotherapyCarePlanAsync(branchId, carePlanId);
+        PopulateRevisionDraft();
+        ClearCommandDrafts();
+    });
+
+    private Task CreateAsync() => MutateAsync(async () => await Api.CreatePhysiotherapyCarePlanAsync(branchId,
+        new(createEncounterId.Trim(), Content(createGoals, createFrequency, createInterventions,
+            createPrecautions, createReviewOn))), "Draft care plan created.", resetCreate: true);
+
+    private Task ReviseAsync() => MutateAsync(async () => await Api.RevisePhysiotherapyCarePlanAsync(branchId,
+        selected!.Id, new(selected.Version, NullIfWhiteSpace(revisionReason), Content(revisionGoals,
+            revisionFrequency, revisionInterventions, revisionPrecautions, revisionReviewOn))),
+        "Care-plan revision appended.");
+
+    private Task ActivateAsync() => MutateAsync(async () => await Api.ActivatePhysiotherapyCarePlanAsync(branchId,
+        selected!.Id, new(selected.Version)), "Care plan activated.");
+
+    private Task RecordSessionAsync() => MutateAsync(async () => await Api.RecordPhysiotherapySessionAsync(branchId,
+        selected!.Id, new(sessionEncounterId.Trim(), sessionSubjective, sessionInterventions, sessionTolerance,
+            sessionNextPlan, sessionHadAdverseEvent, NullIfWhiteSpace(sessionAdverseDetails))),
+        "Immutable treatment session recorded.", resetSession: true);
+
+    private Task RecordOutcomeAsync() => MutateAsync(async () => await Api.RecordPhysiotherapyOutcomeAsync(branchId,
+        selected!.Id, new(NullIfWhiteSpace(outcomeSessionId), outcomeContext, outcomeMeasure, outcomeToolVersion,
+            outcomeValue, outcomeUnit, NullIfWhiteSpace(outcomeBodySite), NullIfWhiteSpace(outcomeLaterality),
+            new DateTimeOffset(outcomeObservedLocal).ToUniversalTime())), "Immutable outcome recorded.", resetOutcome: true);
+
+    private Task CloseAsync(bool discontinued) => MutateAsync(async () => await Api.ClosePhysiotherapyCarePlanAsync(
+        branchId, selected!.Id, new(selected.Version, closureReason), discontinued),
+        discontinued ? "Care plan discontinued." : "Care plan completed.");
+
+    private async Task MutateAsync(Func<Task<PhysiotherapyCarePlanResponse>> operation, string success,
+        bool resetCreate = false, bool resetSession = false, bool resetOutcome = false)
+    {
+        await RunAsync(async () =>
+        {
+            selected = await operation();
+            var fresh = await Api.ListPhysiotherapyCarePlansAsync(branchId, 100);
+            worklist.Clear(); worklist.AddRange(fresh);
+            PopulateRevisionDraft();
+            if (resetCreate) ResetCreate();
+            if (resetSession) ResetSession();
+            if (resetOutcome) ResetOutcome();
+            closureReason = string.Empty; message = success;
+        });
+    }
+
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true; ClearMessage();
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (PortalSessionRequiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { Fail(exception.Error.SafeMessage); }
+        catch (Exception exception) { Fail(exception.Message); }
+        finally { busy = false; }
+    }
+
+    private void PopulateRevisionDraft()
+    {
+        var latest = selected?.Revisions.OrderByDescending(item => item.RevisionNumber).FirstOrDefault();
+        if (latest is null) return;
+        revisionGoals = latest.Content.GoalSummary; revisionFrequency = latest.Content.FrequencyAndDuration;
+        revisionInterventions = latest.Content.PlannedInterventions; revisionPrecautions = latest.Content.Precautions ?? string.Empty;
+        revisionReviewOn = latest.Content.ReviewOn; revisionReason = string.Empty;
+    }
+
+    private void ClearCommandDrafts() { ResetSession(); ResetOutcome(); closureReason = string.Empty; }
+    private void ResetCreate() { createEncounterId = createGoals = createFrequency = createInterventions = createPrecautions = string.Empty; createReviewOn = null; }
+    private void ResetSession() { sessionEncounterId = sessionSubjective = sessionInterventions = sessionTolerance = sessionNextPlan = sessionAdverseDetails = string.Empty; sessionHadAdverseEvent = false; }
+    private void ResetOutcome() { outcomeSessionId = outcomeContext = outcomeMeasure = outcomeToolVersion = outcomeUnit = outcomeBodySite = outcomeLaterality = string.Empty; outcomeValue = 0; outcomeObservedLocal = DateTime.Now; }
+    private static PhysiotherapyCarePlanContentRequest Content(string goals, string frequency, string interventions,
+        string precautions, DateOnly? reviewOn) => new(goals, frequency, interventions, NullIfWhiteSpace(precautions), reviewOn);
+    private static bool Required(params string[] values) => values.All(value => !string.IsNullOrWhiteSpace(value));
+    private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private void Fail(string value) { message = value; isError = true; }
+    private void ClearMessage() { message = null; isError = false; }
+}

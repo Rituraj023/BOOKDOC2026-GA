@@ -17,6 +17,10 @@ else
     [Inject] private PortalSessionState Session { get; set; } = default!;
     private static readonly DashboardCardDescriptor[] Cards =
     [
+        new("clinical-agenda", "Clinical agenda", "Open assigned bookings, preserve Encounter drafts and sign through verified Practitioner eligibility.", "/clinical/encounters",
+            [FoundationPermissions.EncountersView], Badge: "Clinical"),
+        new("physiotherapy", "Physiotherapist", "Review active care plans, preserve revisions and record signed sessions and dynamic outcomes.", "/physiotherapy",
+            [FoundationPermissions.PhysiotherapyCarePlansView], Badge: "Clinical"),
         new("cashier", "Cashier", "Issue invoices, receive split tender, allocate payments and print immutable receipts.", "/billing/cashier",
             [FoundationPermissions.PatientsSearch, FoundationPermissions.CatalogView,
                 FoundationPermissions.BillingInvoicesView, FoundationPermissions.BillingInvoicesIssue,
@@ -24,7 +28,7 @@ else
                 FoundationPermissions.BillingPaymentsAllocate], Badge: "Finance"),
         new("radiology-reception", "Radiology reception", "Find a patient and issue an idempotent X-ray or CT queue token.", "/radiology/check-in",
             [FoundationPermissions.PatientsSearch, FoundationPermissions.QueuesCheckIn], Badge: "Reception"),
-        new("radiology-worklist", "Radiology technician", "Call and progress the authorized imaging worklist.", "/radiology",
-            [FoundationPermissions.QueuesView], Badge: "Operations")
+        new("radiology-worklist", "Radiology execution", "Open bounded ordered work, perform permitted Study/acquisition commands, or complete an independent quality review.", "/radiology",
+            [FoundationPermissions.InvestigationWorklistView], Badge: "Operations")
     ];
 }

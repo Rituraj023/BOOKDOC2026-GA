@@ -1,0 +1,14 @@
+.investigation-list { display: grid; gap: 1rem; }
+.investigation-card { padding: 1rem; border: 1px solid #dbe4ea; border-radius: 10px; background: #fbfdfe; }
+.investigation-card header, .investigation-states, .investigation-handoff { display: flex; align-items: end; gap: .75rem; }
+.investigation-card header { align-items: start; justify-content: space-between; }
+.investigation-card h3 { margin: .15rem 0; }
+.investigation-states { flex-wrap: wrap; margin: .8rem 0; }
+.investigation-states span { padding: .35rem .55rem; border-radius: 999px; background: #eef4f7; }
+.investigation-handoff { flex-wrap: wrap; padding-top: .7rem; border-top: 1px solid #e4ebef; }
+.investigation-handoff label { min-width: 160px; }
+.investigation-handoff label:first-child { flex: 1; }
+.queue-link { padding: .65rem; border-radius: 8px; background: #edf8f4; }
+details { margin-top: .75rem; }
+summary { cursor: pointer; }
+@media (max-width: 700px) { .investigation-card header, .investigation-handoff { align-items: stretch; flex-direction: column; } }

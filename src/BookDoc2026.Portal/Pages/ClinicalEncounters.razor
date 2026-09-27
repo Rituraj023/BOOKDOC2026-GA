@@ -1,0 +1,277 @@
+@page "/clinical/encounters"
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject PortalSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Clinical agenda | BOOKDOC2026 Portal</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel"><h1>Session required</h1><p>Sign in to access the clinical agenda.</p><a class="primary-link" href="/login">Sign in</a></section>
+}
+else if (!CanView)
+{
+    <section class="panel"><h1>Access not granted</h1><p>The Encounter view permission is required.</p></section>
+}
+else
+{
+    <div class="page-heading"><div><p class="eyebrow">Clinical / Assigned agenda</p><h1>Encounter handoff</h1><p>Only confirmed bookings matching your active credential and branch/service/resource assignment are listed.</p></div><ScopeBadge Label="Practitioner + branch scoped" /></div>
+    <section class="panel selector-panel agenda-filter">
+        <label>Agenda date<input type="date" @bind="agendaDate" /></label>
+        <button type="button" @onclick="LoadAgendaAsync" disabled="@busy">Refresh assigned agenda</button>
+    </section>
+    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice @(isError ? "error-notice" : null)" aria-live="polite">@message</p> }
+    <section class="panel">
+        <div class="section-heading"><div><p class="eyebrow">Assigned bookings</p><h2>@agendaDate.ToString("dd MMM yyyy")</h2></div><span class="muted">@agenda.Count bookings · maximum 100</span></div>
+        <ClinicalAgendaWorklist Items="agenda" SelectedBookingNumber="@selectedItem?.BookingNumber" Select="OpenAgendaItemAsync" />
+    </section>
+
+    @if (selectedItem is not null)
+    {
+        <section class="panel clinical-plan-heading">
+            <div class="section-heading"><div><p class="eyebrow">@selectedItem.BookingNumber</p><h2>@selectedItem.PatientDisplayName</h2></div><span class="clinical-state">@(encounter?.Status ?? "Encounter not started")</span></div>
+            <div class="clinical-metadata"><span>@selectedItem.PatientNumber</span><span>@selectedItem.ServiceCode · @selectedItem.ServiceName</span><span>@selectedItem.StartUtc.ToLocalTime().ToString("g")</span></div>
+        </section>
+
+        @if (encounter is null && CanDraft)
+        {
+            <section class="panel clinical-command"><div class="section-heading"><div><p class="eyebrow">Common clinical record</p><h2>Start Encounter draft</h2></div><span class="muted">No specialty protocol is implied</span></div><EncounterDraftForm Model="draft" Changed="StateHasChanged" />
+                <button class="primary" type="button" @onclick="StartEncounterAsync" disabled="@(busy || !CanSaveDraft)">Start Encounter</button>
+            </section>
+        }
+        else if (encounter is null)
+        {
+            <section class="panel"><h2>Encounter not started</h2><p>Your role can view this assigned Booking but cannot create an Encounter draft.</p></section>
+        }
+        else
+        {
+            @if (encounter.Status == "Draft" && CanDraft)
+            {
+                <section class="panel clinical-command"><div class="section-heading"><div><p class="eyebrow">Draft revision @encounter.LatestRevisionNumber</p><h2>Update Encounter</h2></div><span class="muted">Saving appends; it does not overwrite</span></div><EncounterDraftForm Model="draft" Changed="StateHasChanged" />
+                    <div class="command-row"><button type="button" @onclick="ReviseDraftAsync" disabled="@(busy || !CanSaveDraft)">Append draft revision</button>@if (CanSign) { <button class="primary" type="button" @onclick="SignAsync" disabled="@(busy || !CanSignCurrent)">Sign current draft</button> }</div>
+                    @if (CanSign && !CanSignCurrent) { <p class="muted">@(draft.CanSign ? "Save the changed draft before signing." : "Assessment and plan are required before signing.")</p> }
+                </section>
+            }
+
+            @if (encounter.Status == "Signed")
+            {
+                <section class="panel handoff-panel"><div><p class="eyebrow">Next authorized step</p><h2>@HandoffTitle</h2><p>@HandoffDescription</p></div>
+                    @if (CanOpenPhysiotherapy) { <button class="primary" type="button" @onclick="OpenPhysiotherapy">Open Physiotherapy workspace</button> }
+                </section>
+
+                @if (CanViewInvestigations)
+                {
+                    <section class="panel clinical-command">
+                        <div class="section-heading"><div><p class="eyebrow">Investigations / X-ray and CT</p><h2>Orders and queue handoff</h2></div><span class="muted">Order, result and queue states stay independent</span></div>
+                        @if (CanCreateInvestigation)
+                        {
+                            <details>
+                                <summary>Request a catalog service</summary>
+                                <div class="form-grid investigation-request-grid">
+                                    <label>Catalog service<select value="@investigationServiceId" @onchange="SelectInvestigationService"><option value="">Select configured imaging service</option>@foreach (var service in investigationServices) { <option value="@service.ServiceId">@service.ServiceCode · @service.ServiceName (@service.Modality)</option> }</select></label>
+                                    <label>Modality<input value="@investigationModality" disabled /></label>
+                                    <label class="wide">Clinical indication<textarea @bind="clinicalIndication" @bind:event="oninput" placeholder="Reason for the requested investigation"></textarea></label>
+                                </div>
+                                <button class="primary" type="button" @onclick="CreateInvestigationAsync" disabled="@(!CanSubmitInvestigation)">Request investigation</button>
+                            </details>
+                        }
+                        <InvestigationOrderList Items="investigationOrders" ServicePoints="imagingServicePoints"
+                            CanHandoff="CanHandoffInvestigation" CanManagePriority="CanManageQueuePriority"
+                            BusyOrderId="busyInvestigationOrderId" Handoff="HandoffInvestigationAsync" />
+                    </section>
+                }
+            }
+
+            <section class="panel"><div class="section-heading"><div><p class="eyebrow">Immutable history</p><h2>@encounter.EncounterNumber</h2></div><span class="muted">Version @encounter.Version</span></div><EncounterHistory Encounter="encounter" /></section>
+        }
+    }
+}
+
+@code {
+    private readonly List<ClinicalAgendaItemResponse> agenda = [];
+    private readonly List<InvestigationOrderResponse> investigationOrders = [];
+    private readonly List<InvestigationServiceOptionResponse> investigationServices = [];
+    private readonly List<ImagingServicePointResponse> imagingServicePoints = [];
+    private readonly Dictionary<string, Guid> investigationHandoffRequestIds = new(StringComparer.Ordinal);
+    private readonly EncounterDraft draft = new();
+    private ClinicalAgendaItemResponse? selectedItem;
+    private EncounterResponse? encounter;
+    private DateOnly agendaDate = DateOnly.FromDateTime(DateTime.Today);
+    private string branchId = string.Empty;
+    private string investigationServiceId = string.Empty, investigationModality = "XRay";
+    private string clinicalIndication = string.Empty;
+    private string? busyInvestigationOrderId;
+    private Guid investigationRequestId = Guid.NewGuid();
+    private string? message;
+    private bool busy, isError;
+
+    private bool CanView => Session.HasPermission(FoundationPermissions.EncountersView);
+    private bool CanDraft => Session.HasPermission(FoundationPermissions.EncounterDraftsManage);
+    private bool CanSign => Session.HasPermission(FoundationPermissions.EncountersSign);
+    private bool CanViewInvestigations => Session.HasPermission(FoundationPermissions.InvestigationsView);
+    private bool CanCreateInvestigation => Session.HasPermission(FoundationPermissions.InvestigationOrdersCreate);
+    private bool CanHandoffInvestigation => Session.HasPermission(FoundationPermissions.InvestigationQueueHandoff)
+        && Session.HasPermission(FoundationPermissions.QueuesCheckIn);
+    private bool CanManageQueuePriority => Session.HasPermission(FoundationPermissions.QueuesPriorityManage);
+    private bool CanSubmitInvestigation => !busy && !string.IsNullOrWhiteSpace(investigationServiceId)
+        && clinicalIndication.Trim().Length >= 3;
+    private bool CanSaveDraft => draft.CanSave;
+    private EncounterContentRequest? LatestPersistedContent => encounter?.Revisions
+        .OrderByDescending(item => item.RevisionNumber).FirstOrDefault()?.Content;
+    private bool HasUnsavedChanges => draft.CanSave && LatestPersistedContent is not null
+        && draft.ToRequest() != LatestPersistedContent;
+    private bool CanSignCurrent => draft.CanSign && !HasUnsavedChanges;
+    private string? LatestSpecialty => encounter?.Revisions.OrderByDescending(item => item.RevisionNumber)
+        .FirstOrDefault()?.Content.SpecialtyCode;
+    private ClinicalHandoffAction Handoff => ClinicalHandoffActionResolver.Resolve(encounter?.Status,
+        LatestSpecialty, selectedItem?.CarePlanId);
+    private bool CanOpenPhysiotherapy => Session.HasPermission(FoundationPermissions.PhysiotherapyCarePlansView)
+        && (Handoff == ClinicalHandoffAction.ContinuePhysiotherapyPlan
+            || Handoff == ClinicalHandoffAction.StartPhysiotherapyPlan
+                && Session.HasPermission(FoundationPermissions.PhysiotherapyCarePlansManage));
+    private string HandoffTitle => Handoff switch
+    {
+        ClinicalHandoffAction.StartPhysiotherapyPlan => "Start Physiotherapy care plan",
+        ClinicalHandoffAction.ContinuePhysiotherapyPlan => "Continue Physiotherapy care plan",
+        _ => "Review signed Encounter"
+    };
+    private string HandoffDescription => Handoff switch
+    {
+        ClinicalHandoffAction.StartPhysiotherapyPlan => "This signed Physiotherapy Encounter can start a policy-neutral care plan.",
+        ClinicalHandoffAction.ContinuePhysiotherapyPlan => "Use this signed Encounter to continue the linked/open care plan and record a treatment session.",
+        _ => "No automated specialty handoff is available for this Encounter."
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated || !CanView) return;
+        branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(branchId)) { Fail("Select a branch scope when signing in."); return; }
+        await LoadAgendaAsync();
+    }
+
+    private Task LoadAgendaAsync() => RunAsync(async () =>
+    {
+        var selectedNumber = selectedItem?.BookingNumber;
+        agenda.Clear(); agenda.AddRange(await Api.ListClinicalAgendaAsync(branchId, agendaDate, 100));
+        selectedItem = selectedNumber is null ? null : agenda.SingleOrDefault(item => item.BookingNumber == selectedNumber);
+        if (selectedItem is null) { encounter = null; investigationOrders.Clear(); }
+    });
+
+    private Task OpenAgendaItemAsync(ClinicalAgendaItemResponse item) => RunAsync(async () =>
+    {
+        selectedItem = item;
+        encounter = string.IsNullOrWhiteSpace(item.EncounterId) ? null : await Api.GetEncounterAsync(branchId, item.EncounterId);
+        investigationOrders.Clear();
+        if (encounter is null) ResetDraft(); else { PopulateDraft(); await LoadInvestigationWorkspaceAsync(); }
+    });
+
+    private Task StartEncounterAsync() => MutateAsync(async () => await Api.StartEncounterAsync(branchId,
+        new(selectedItem!.BookingId, draft.ToRequest())), "Encounter draft started.");
+
+    private Task ReviseDraftAsync() => MutateAsync(async () => await Api.ReviseEncounterDraftAsync(branchId,
+        encounter!.Id, new(encounter.Version, draft.ToRequest())), "Draft revision appended.");
+
+    private Task SignAsync() => MutateAsync(async () => await Api.SignEncounterAsync(branchId, encounter!.Id,
+        new(encounter.Version)), "Encounter signed; the next specialty handoff is now available.");
+
+    private async Task MutateAsync(Func<Task<EncounterResponse>> operation, string success)
+    {
+        await RunAsync(async () =>
+        {
+            encounter = await operation();
+            var bookingNumber = selectedItem!.BookingNumber;
+            var refreshed = await Api.ListClinicalAgendaAsync(branchId, agendaDate, 100);
+            agenda.Clear(); agenda.AddRange(refreshed);
+            selectedItem = agenda.Single(item => item.BookingNumber == bookingNumber);
+            PopulateDraft(); await LoadInvestigationWorkspaceAsync(); message = success;
+        });
+    }
+
+    private Task CreateInvestigationAsync() => RunAsync(async () =>
+    {
+        var created = await Api.CreateInvestigationOrderAsync(branchId, encounter!.Id, new(
+            investigationRequestId, investigationServiceId, investigationModality, clinicalIndication.Trim()));
+        investigationRequestId = Guid.NewGuid();
+        clinicalIndication = string.Empty;
+        await LoadInvestigationWorkspaceAsync();
+        message = created.IsReplay
+            ? "The earlier investigation request was recovered; no duplicate order was created."
+            : $"Investigation {created.OrderNumber} requested.";
+    });
+
+    private async Task HandoffInvestigationAsync(InvestigationQueueHandoffSelection selection)
+    {
+        busyInvestigationOrderId = selection.OrderId;
+        if (!investigationHandoffRequestIds.TryGetValue(selection.OrderId, out var requestId))
+            investigationHandoffRequestIds[selection.OrderId] = requestId = Guid.NewGuid();
+        var submitted = false;
+        await RunAsync(async () =>
+        {
+            var order = investigationOrders.Single(item => item.Id == selection.OrderId);
+            var handedOff = await Api.HandoffInvestigationOrderAsync(branchId, encounter!.Id, order.Id, new(
+                requestId, order.Version, selection.ServicePointId, selection.Priority,
+                selection.PriorityReason));
+            submitted = true;
+            await LoadInvestigationWorkspaceAsync();
+            message = $"Queue token {handedOff.QueueTicket!.DisplayToken} issued for {handedOff.OrderNumber}.";
+        });
+        if (submitted) investigationHandoffRequestIds.Remove(selection.OrderId);
+        busyInvestigationOrderId = null;
+    }
+
+    private async Task LoadInvestigationWorkspaceAsync()
+    {
+        investigationOrders.Clear();
+        if (encounter?.Status != "Signed" || !CanViewInvestigations) return;
+        investigationOrders.AddRange(await Api.ListInvestigationOrdersAsync(branchId, encounter.Id));
+        if (CanCreateInvestigation && investigationServices.Count == 0)
+        {
+            investigationServices.AddRange(await Api.ListInvestigationCatalogOptionsAsync(branchId, encounter.Id));
+            var firstService = investigationServices.FirstOrDefault();
+            investigationServiceId = firstService?.ServiceId ?? string.Empty;
+            investigationModality = firstService?.Modality ?? "XRay";
+        }
+        if (CanHandoffInvestigation && imagingServicePoints.Count == 0)
+            imagingServicePoints.AddRange((await Api.ListImagingServicePointsAsync(branchId))
+                .Where(item => item.IsActive));
+    }
+
+    private void SelectInvestigationService(ChangeEventArgs args)
+    {
+        investigationServiceId = args.Value?.ToString() ?? string.Empty;
+        investigationModality = investigationServices
+            .FirstOrDefault(item => item.ServiceId == investigationServiceId)?.Modality ?? "XRay";
+    }
+
+    private void OpenPhysiotherapy()
+    {
+        var encounterToken = Uri.EscapeDataString(encounter!.Id);
+        var target = string.IsNullOrWhiteSpace(selectedItem!.CarePlanId)
+            ? $"/physiotherapy?encounterId={encounterToken}"
+            : $"/physiotherapy?carePlanId={Uri.EscapeDataString(selectedItem.CarePlanId)}&sessionEncounterId={encounterToken}";
+        Navigation.NavigateTo(target);
+    }
+
+    private void PopulateDraft()
+    {
+        var content = encounter?.Revisions.OrderByDescending(item => item.RevisionNumber).First().Content;
+        if (content is null) { draft.Reset(); return; }
+        draft.Load(content);
+    }
+
+    private void ResetDraft() => draft.Reset();
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true; ClearMessage();
+        try { await Session.EnsureFreshAsync(Auth); await operation(); }
+        catch (PortalSessionRequiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { Fail(exception.Error.SafeMessage); }
+        catch (Exception exception) { Fail(exception.Message); }
+        finally { busy = false; }
+    }
+    private void Fail(string value) { message = value; isError = true; }
+    private void ClearMessage() { message = null; isError = false; }
+}

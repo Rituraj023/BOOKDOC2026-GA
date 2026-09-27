@@ -1,0 +1,15 @@
+.clinical-history { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; }
+.clinical-history h3 { margin: .2rem 0 .8rem; }
+.outcomes-section { grid-column: 1 / -1; }
+.history-card { margin-bottom: .75rem; padding: 1rem; border: 1px solid #dbe4eb; border-radius: 10px; background: #fbfdff; }
+.history-card.adverse { border-left: 4px solid #dc2626; }
+.history-card header { display: flex; justify-content: space-between; gap: 1rem; color: #334155; }
+.history-card header span, .history-card small, .history-empty { color: #64748b; }
+.history-card dl { display: grid; grid-template-columns: minmax(110px, .35fr) 1fr; gap: .35rem .7rem; font-size: .86rem; }
+.history-card dt { color: #64748b; font-weight: 700; }
+.history-card dd { margin: 0; white-space: pre-wrap; }
+.change-reason { padding: .45rem .6rem; background: #fefce8; border-radius: 6px; font-size: .82rem; }
+.outcome-values { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .8rem; }
+.outcome-values > span { min-width: 100px; padding: .55rem .7rem; border-radius: 8px; background: #eef7f8; }
+.outcome-values b, .outcome-values small { display: block; }
+@media (max-width: 850px) { .clinical-history { grid-template-columns: 1fr; } .outcomes-section { grid-column: auto; } }

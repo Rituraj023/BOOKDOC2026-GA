@@ -1,0 +1,7 @@
+.agenda-wrap { overflow-x: auto; }
+.agenda-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.agenda-table th, .agenda-table td { padding: .75rem .65rem; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+.agenda-table th { color: #64748b; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.agenda-table td small { display: block; margin-top: .2rem; color: #64748b; }
+.agenda-table tr.selected { background: #ecfeff; }
+.agenda-empty { color: #64748b; }

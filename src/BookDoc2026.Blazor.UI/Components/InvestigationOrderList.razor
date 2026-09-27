@@ -1,0 +1,74 @@
+@if (Items.Count == 0)
+{
+    <p class="empty">No investigation orders have been requested from this Encounter.</p>
+}
+else
+{
+    <div class="investigation-list">
+        @foreach (var item in Items)
+        {
+            var draft = GetDraft(item.Id);
+            var destinations = ServicePoints.Where(point => point.IsActive && point.Modality == item.Modality).ToArray();
+            <article class="investigation-card" @key="item.Id">
+                <header><div><span class="eyebrow">@item.Modality · @item.ServiceCode</span><h3>@item.ServiceName</h3></div><strong>@item.OrderNumber</strong></header>
+                <p>@item.ClinicalIndication</p>
+                <div class="investigation-states">
+                    <span>Order <strong>@item.OrderStatus</strong></span>
+                    <span>Result <strong>@item.ResultStatus</strong></span>
+                    <span>Queue <strong>@(item.QueueTicket?.Status ?? "Not handed off")</strong></span>
+                </div>
+                @if (item.QueueTicket is not null)
+                {
+                    <p class="queue-link">Queue token <strong>@item.QueueTicket.DisplayToken</strong> · <QueueStatusBadge Status="@item.QueueTicket.Status" /></p>
+                }
+                else if (CanHandoff)
+                {
+                    <div class="investigation-handoff">
+                        <label>Destination<select value="@draft.ServicePointId" @onchange="args => SetServicePoint(item.Id, args)"><option value="">Select matching @item.Modality service point</option>@foreach (var point in destinations) { <option value="@point.Id">@point.Code · @point.Name</option> }</select></label>
+                        <label>Priority<select value="@draft.Priority" @onchange="args => SetPriority(item.Id, args)"><option>Normal</option>@if (CanManagePriority) { <option>Urgent</option> }</select></label>
+                        @if (draft.Priority == "Urgent")
+                        {
+                            <label>Urgent reason<input value="@draft.PriorityReason" @oninput="args => SetReason(item.Id, args)" /></label>
+                        }
+                        <button type="button" @onclick="() => SubmitAsync(item, draft)" disabled="@(BusyOrderId == item.Id || !CanSubmit(draft))">Send to queue</button>
+                    </div>
+                    @if (destinations.Length == 0) { <p class="muted">No active @item.Modality service point is configured for this branch.</p> }
+                }
+                <details><summary>History · @item.History.Count events</summary><ol>@foreach (var history in item.History.OrderBy(entry => entry.OrderVersion)) { <li>v@history.OrderVersion · @history.Action · @history.OccurredUtc.ToLocalTime().ToString("g")</li> }</ol></details>
+            </article>
+        }
+    </div>
+}
+
+@code {
+    private readonly Dictionary<string, HandoffDraft> drafts = new(StringComparer.Ordinal);
+
+    [Parameter, EditorRequired] public IReadOnlyCollection<InvestigationOrderResponse> Items { get; set; } = [];
+    [Parameter] public IReadOnlyCollection<ImagingServicePointResponse> ServicePoints { get; set; } = [];
+    [Parameter] public bool CanHandoff { get; set; }
+    [Parameter] public bool CanManagePriority { get; set; }
+    [Parameter] public string? BusyOrderId { get; set; }
+    [Parameter] public EventCallback<InvestigationQueueHandoffSelection> Handoff { get; set; }
+
+    private HandoffDraft GetDraft(string id)
+    {
+        if (!drafts.TryGetValue(id, out var draft)) drafts[id] = draft = new();
+        return draft;
+    }
+
+    private void SetServicePoint(string id, ChangeEventArgs args) => GetDraft(id).ServicePointId = args.Value?.ToString() ?? string.Empty;
+    private void SetPriority(string id, ChangeEventArgs args) => GetDraft(id).Priority = args.Value?.ToString() ?? "Normal";
+    private void SetReason(string id, ChangeEventArgs args) => GetDraft(id).PriorityReason = args.Value?.ToString();
+    private static bool CanSubmit(HandoffDraft draft) => !string.IsNullOrWhiteSpace(draft.ServicePointId)
+        && (draft.Priority != "Urgent" || !string.IsNullOrWhiteSpace(draft.PriorityReason));
+    private Task SubmitAsync(InvestigationOrderResponse item, HandoffDraft draft) => Handoff.InvokeAsync(new(
+        item.Id, draft.ServicePointId, draft.Priority,
+        string.IsNullOrWhiteSpace(draft.PriorityReason) ? null : draft.PriorityReason.Trim()));
+
+    private sealed class HandoffDraft
+    {
+        public string ServicePointId { get; set; } = string.Empty;
+        public string Priority { get; set; } = "Normal";
+        public string? PriorityReason { get; set; }
+    }
+}

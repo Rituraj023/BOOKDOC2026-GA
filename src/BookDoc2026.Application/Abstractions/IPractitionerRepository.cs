@@ -36,4 +36,6 @@ public interface IPractitionerEligibility
 {
     Task EnsureEligibleSignerAsync(long identitySubjectId, long branchId, long serviceId, DateOnly date,
         CancellationToken cancellationToken);
+    Task EnsureEligiblePerformerAsync(long identitySubjectId, long branchId, long serviceId, DateOnly date,
+        CancellationToken cancellationToken);
 }

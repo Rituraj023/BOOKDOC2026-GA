@@ -45,3 +45,22 @@ public sealed record EncounterResponse(
     string? SignedByActorId,
     long Version,
     IReadOnlyCollection<EncounterRevisionResponse> Revisions);
+
+public sealed record ClinicalAgendaItemResponse(
+    string BookingId,
+    string BookingNumber,
+    string PatientId,
+    string PatientNumber,
+    string PatientDisplayName,
+    string ServiceId,
+    string ServiceCode,
+    string ServiceName,
+    DateTimeOffset StartUtc,
+    DateTimeOffset EndUtc,
+    string? EncounterId,
+    string? EncounterNumber,
+    string? EncounterStatus,
+    long? EncounterVersion,
+    string? CarePlanId,
+    string? CarePlanNumber,
+    string? CarePlanStatus);

@@ -50,7 +50,8 @@ public sealed class QueueService(
         _ = await RequireBranchWithAnyPermissionAsync(branchId, cancellationToken,
             FoundationPermissions.QueuesView,
             FoundationPermissions.QueuesCheckIn,
-            FoundationPermissions.QueuesServicePointsManage);
+            FoundationPermissions.QueuesServicePointsManage,
+            FoundationPermissions.InvestigationWorklistView);
         return (await repository.ListServicePointsAsync(branchId, cancellationToken)).Select(Map).ToArray();
     }
 
@@ -206,6 +207,7 @@ public sealed class QueueService(
         publicIds.Encode(PublicIdKind.ImagingServicePoint, ticket.ServicePointId, ticket.TenantId),
         publicIds.Encode(PublicIdKind.Patient, ticket.PatientId, ticket.TenantId),
         publicIds.EncodeOptional(PublicIdKind.Booking, ticket.BookingId, ticket.TenantId),
+        publicIds.EncodeOptional(PublicIdKind.InvestigationOrder, ticket.InvestigationOrderId, ticket.TenantId),
         ticket.DisplayToken, ticket.Priority.ToString(), ticket.Status.ToString(), ticket.ArrivedUtc,
         ticket.CalledUtc, ticket.ServiceStartedUtc, ticket.CompletedUtc, ticket.CancelledUtc,
         ticket.CallCount, ticket.Version, isReplay);

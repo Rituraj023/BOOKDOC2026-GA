@@ -1,0 +1,20 @@
+<div class="encounter-form-grid">
+    <label>Specialty code<input @bind="Model.SpecialtyCode" @bind:event="oninput" @bind:after="NotifyChanged" placeholder="Clinic-approved code" /></label>
+    <label>Template key<input @bind="Model.TemplateKey" @bind:event="oninput" @bind:after="NotifyChanged" placeholder="Clinic-approved key" /></label>
+    <label>Template version<input @bind="Model.TemplateVersion" @bind:event="oninput" @bind:after="NotifyChanged" /></label>
+    <label>Body site (optional)<input @bind="Model.BodySite" @bind:event="oninput" @bind:after="NotifyChanged" /></label>
+    <label>Laterality code (optional)<input @bind="Model.LateralityCode" @bind:event="oninput" @bind:after="NotifyChanged" /></label>
+    <label class="wide">Chief complaint<textarea @bind="Model.ChiefComplaint" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+    <label>History (optional)<textarea @bind="Model.History" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+    <label>Examination (optional)<textarea @bind="Model.Examination" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+    <label>Assessment<textarea @bind="Model.Assessment" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+    <label>Plan<textarea @bind="Model.Plan" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+    <label class="wide">Instructions (optional)<textarea @bind="Model.Instructions" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EncounterDraft Model { get; set; } = default!;
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private Task NotifyChanged() => Changed.InvokeAsync();
+}

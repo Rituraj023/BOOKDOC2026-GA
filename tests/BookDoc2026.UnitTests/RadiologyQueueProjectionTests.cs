@@ -1,4 +1,5 @@
 using BookDoc2026.Blazor.UI.Queues;
+using BookDoc2026.Contracts.Clinical;
 using BookDoc2026.Contracts.Queues;
 
 namespace BookDoc2026.UnitTests;
@@ -9,7 +10,7 @@ public sealed class RadiologyQueueProjectionTests
     public void Authorized_branch_event_invalidates_selected_projection_without_comparing_ciphertext_ids()
     {
         var projection = new RadiologyQueueProjection();
-        projection.Replace([Ticket("ticket-1", "point-1", 3)], []);
+        projection.Replace([Work("ticket-1", "point-1", 3)], []);
 
         Assert.True(projection.RequiresRefresh(Change("different-ciphertext", "different-point-ciphertext", 3), "point-1"));
         Assert.True(projection.RequiresRefresh(Change("ticket-1", "point-1", 4), "point-1"));
@@ -24,14 +25,21 @@ public sealed class RadiologyQueueProjectionTests
         var projection = new RadiologyQueueProjection();
         var display = new QueueDisplayTicketResponse("XR-009", "Called", 1, 2, DateTimeOffset.UtcNow);
 
-        projection.Replace([Ticket("ticket-9", "point-1", 2)], [display]);
+        projection.Replace([Work("ticket-9", "point-1", 2)], [display]);
 
-        Assert.Single(projection.Tickets);
+        var work = Assert.Single(projection.Items);
+        Assert.Equal("ENC-REFERENCE", work.EncounterNumber);
+        Assert.Equal("Persistent knee pain", work.ClinicalIndication);
         Assert.Equal("XR-009", Assert.Single(projection.DisplayTickets).DisplayToken);
     }
 
+    private static InvestigationWorklistItemResponse Work(string id, string point, long version) => new(
+        Ticket(id, point, version), "order", "INV-REFERENCE", "service", "XR-KNEE", "Knee X-ray",
+        "XRay", "Persistent knee pain", DateTimeOffset.UtcNow, "patient", "PAT-REFERENCE",
+        "Test Patient", "encounter", "ENC-REFERENCE");
+
     private static QueueTicketResponse Ticket(string id, string point, long version) => new(
-        id, point, "patient", null, "XR-009", "Normal", "Waiting", DateTimeOffset.UtcNow,
+        id, point, "patient", null, null, "XR-009", "Normal", "Waiting", DateTimeOffset.UtcNow,
         null, null, null, null, 0, version, false);
 
     private static QueueRealtimeEvent Change(string id, string point, long version) =>

@@ -1,22 +1,25 @@
-@if (Tickets.Count == 0)
+@if (Items.Count == 0)
 {
-    <p class="queue-empty">No queue tickets are available for this service point.</p>
+    <p class="queue-empty">No active investigation orders are queued for this service point.</p>
 }
 else
 {
     <div class="queue-table-wrap">
         <table class="queue-table">
-            <thead><tr><th>Token</th><th>Priority</th><th>Status</th><th>Arrived</th><th>Calls</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Token</th><th>Patient</th><th>Ordered work</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-            @foreach (var ticket in Tickets)
+            @foreach (var item in Items)
             {
-                <tr class="@(ticket.Priority == "Urgent" ? "urgent" : null)">
-                    <td><strong>@ticket.DisplayToken</strong></td>
+                var ticket = item.QueueTicket;
+                <tr class="@RowClass(item)">
+                    <td><strong>@ticket.DisplayToken</strong><small>@ticket.ArrivedUtc.ToLocalTime().ToString("g")</small></td>
+                    <td><strong>@item.PatientDisplayName</strong><small>@item.PatientNumber</small></td>
+                    <td><strong>@item.ServiceName</strong><small>@item.OrderNumber · @item.Modality</small></td>
                     <td>@ticket.Priority</td>
                     <td><QueueStatusBadge Status="@ticket.Status" /></td>
-                    <td>@ticket.ArrivedUtc.ToLocalTime().ToString("g")</td>
-                    <td>@ticket.CallCount</td>
                     <td class="queue-actions">
+                        <button type="button" class="context-button" aria-expanded="@(openTicketId == ticket.Id)" @onclick="() => ToggleContext(ticket.Id)">@(openTicketId == ticket.Id ? "Close context" : "Open context")</button>
+                        @if (CanUseStudy) { <button type="button" class="study-button" @onclick="() => OpenStudy.InvokeAsync(item)" disabled="@IsBusy(ticket)">@(SelectedOrderId == item.OrderId ? "Study open" : "Open study")</button> }
                         @if (CanCall && ticket.Status == "Waiting") { <button @onclick="() => CallAsync(ticket)" disabled="@IsBusy(ticket)">Call</button> }
                         @if (CanCall && ticket.Status == "Called") { <button @onclick="() => RecallAsync(ticket)" disabled="@IsBusy(ticket)">Recall</button> }
                         @if (CanProgress && ticket.Status == "Called") { <button @onclick="() => PrepareAsync(ticket)" disabled="@IsBusy(ticket)">Prepare</button> }
@@ -25,6 +28,21 @@ else
                         @if (CanCancel && ticket.Status is not ("Completed" or "Cancelled")) { <button @onclick="() => CancelAsync(ticket)" disabled="@IsBusy(ticket)">Cancel</button> }
                     </td>
                 </tr>
+                @if (openTicketId == ticket.Id)
+                {
+                    <tr class="work-context"><td colspan="6">
+                        <div class="context-grid">
+                            <div><span>Clinical indication</span><p>@item.ClinicalIndication</p></div>
+                            <dl>
+                                <div><dt>Encounter</dt><dd>@item.EncounterNumber</dd></div>
+                                <div><dt>Order placed</dt><dd>@item.OrderedUtc.ToLocalTime().ToString("g")</dd></div>
+                                <div><dt>Service code</dt><dd>@item.ServiceCode</dd></div>
+                                <div><dt>Queue calls</dt><dd>@ticket.CallCount</dd></div>
+                            </dl>
+                        </div>
+                        <p class="context-boundary">This worklist intentionally excludes Encounter notes, result interpretation, reports, documents and patient contact details.</p>
+                    </td></tr>
+                }
             }
             </tbody>
         </table>
@@ -32,13 +50,21 @@ else
 }
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<QueueTicketResponse> Tickets { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<InvestigationWorklistItemResponse> Items { get; set; } = [];
     [Parameter] public bool CanCall { get; set; }
     [Parameter] public bool CanProgress { get; set; }
     [Parameter] public bool CanCancel { get; set; }
+    [Parameter] public bool CanUseStudy { get; set; }
+    [Parameter] public string? SelectedOrderId { get; set; }
     [Parameter] public string? BusyTicketId { get; set; }
     [Parameter] public EventCallback<(QueueTicketResponse Ticket, string Action)> Transition { get; set; }
+    [Parameter] public EventCallback<InvestigationWorklistItemResponse> OpenStudy { get; set; }
+    private string? openTicketId;
+    private void ToggleContext(string ticketId) => openTicketId = openTicketId == ticketId ? null : ticketId;
     private bool IsBusy(QueueTicketResponse ticket) => string.Equals(BusyTicketId, ticket.Id, StringComparison.Ordinal);
+    private string? RowClass(InvestigationWorklistItemResponse item) => item.OrderId == SelectedOrderId
+        ? "selected-study"
+        : item.QueueTicket.Priority == "Urgent" ? "urgent" : null;
     private Task CallAsync(QueueTicketResponse ticket) => Transition.InvokeAsync((ticket, "call"));
     private Task RecallAsync(QueueTicketResponse ticket) => Transition.InvokeAsync((ticket, "recall"));
     private Task PrepareAsync(QueueTicketResponse ticket) => Transition.InvokeAsync((ticket, "prepare"));

@@ -1,0 +1,50 @@
+@using BookDoc2026.Blazor.UI.Clinical
+
+<div class="clinical-history">
+    <section>
+        <h3>Care-plan revisions</h3>
+        @foreach (var revision in Plan.Revisions.OrderByDescending(item => item.RevisionNumber))
+        {
+            <article class="history-card">
+                <header><strong>Revision @revision.RevisionNumber</strong><span>@revision.CreatedUtc.ToLocalTime().ToString("g")</span></header>
+                @if (!string.IsNullOrWhiteSpace(revision.ChangeReason)) { <p class="change-reason">Reason: @revision.ChangeReason</p> }
+                <dl><dt>Goals</dt><dd>@revision.Content.GoalSummary</dd><dt>Frequency and duration</dt><dd>@revision.Content.FrequencyAndDuration</dd><dt>Planned interventions</dt><dd>@revision.Content.PlannedInterventions</dd>
+                    @if (!string.IsNullOrWhiteSpace(revision.Content.Precautions)) { <dt>Precautions</dt><dd>@revision.Content.Precautions</dd> }
+                    <dt>Review</dt><dd>@(revision.Content.ReviewOn?.ToString("dd MMM yyyy") ?? "Not set")</dd></dl>
+                <small>Integrity @ShortHash(revision.ContentHash)</small>
+            </article>
+        }
+    </section>
+    <section>
+        <h3>Treatment sessions</h3>
+        @if (Plan.Sessions.Count == 0) { <p class="history-empty">No sessions recorded.</p> }
+        @foreach (var session in Plan.Sessions.OrderByDescending(item => item.SequenceNumber))
+        {
+            <article class="history-card @(session.HadAdverseEvent ? "adverse" : null)">
+                <header><strong>Session @session.SequenceNumber</strong><span>@session.PerformedUtc.ToLocalTime().ToString("g")</span></header>
+                <dl><dt>Subjective response</dt><dd>@session.SubjectiveResponse</dd><dt>Interventions</dt><dd>@session.Interventions</dd><dt>Tolerance</dt><dd>@session.Tolerance</dd><dt>Next plan</dt><dd>@session.NextPlan</dd>
+                    @if (session.HadAdverseEvent) { <dt>Adverse event</dt><dd>@session.AdverseEventDetails</dd> }</dl>
+                <small>Integrity @ShortHash(session.ContentHash)</small>
+            </article>
+        }
+    </section>
+    <section class="outcomes-section">
+        <h3>Outcome trends</h3>
+        @if (Series.Count == 0) { <p class="history-empty">No outcomes recorded.</p> }
+        @foreach (var series in Series)
+        {
+            <article class="history-card">
+                <header><strong>@series.MeasureCode · tool @series.ToolVersion</strong><span>@series.Unit @Site(series)</span></header>
+                <div class="outcome-values">@foreach (var item in series.Observations) { <span><b>@item.Value</b><small>@item.ObservedUtc.ToLocalTime().ToString("dd MMM") · @item.ContextCode</small></span> }</div>
+            </article>
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PhysiotherapyCarePlanResponse Plan { get; set; } = default!;
+    private IReadOnlyList<PhysiotherapyOutcomeSeries> Series => PhysiotherapyOutcomeSeriesBuilder.Build(Plan.Outcomes);
+    private static string ShortHash(string value) => value.Length <= 12 ? value : $"{value[..12]}…";
+    private static string Site(PhysiotherapyOutcomeSeries series) =>
+        string.Join(" ", new[] { series.BodySite, series.LateralityCode }.Where(value => !string.IsNullOrWhiteSpace(value)));
+}

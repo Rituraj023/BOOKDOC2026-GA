@@ -101,6 +101,7 @@ public sealed class QueueRepository(BookDocDbContext dbContext) : IQueueReposito
         {
             if (existing.BranchId != ticket.BranchId || existing.ServicePointId != ticket.ServicePointId
                 || existing.PatientId != ticket.PatientId || existing.BookingId != ticket.BookingId
+                || existing.InvestigationOrderId != ticket.InvestigationOrderId
                 || existing.Priority != ticket.Priority)
                 throw new DomainRuleException("The queue check-in request identifier was reused with different content.");
             return new(existing, true);

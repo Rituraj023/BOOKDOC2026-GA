@@ -123,10 +123,38 @@ internal sealed class ApplicationIdentitySupportConfiguration :
             FoundationPermissions.BillingPaymentsReceive,
             FoundationPermissions.BillingPaymentsAllocate
         };
+        var physiotherapyPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.PhysiotherapyCarePlansView,
+            FoundationPermissions.PhysiotherapyCarePlansManage,
+            FoundationPermissions.PhysiotherapySessionsRecord,
+            FoundationPermissions.PhysiotherapyOutcomesRecord
+        };
+        var investigationPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.InvestigationsView,
+            FoundationPermissions.InvestigationOrdersCreate,
+            FoundationPermissions.InvestigationQueueHandoff
+        };
+        var investigationWorklistPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.InvestigationWorklistView
+        };
+        var radiologyStudyPermissions = new HashSet<string>(StringComparer.Ordinal)
+        {
+            FoundationPermissions.RadiologyStudiesView,
+            FoundationPermissions.RadiologyStudiesStart,
+            FoundationPermissions.RadiologyAcquisitionsRecord,
+            FoundationPermissions.RadiologyStudiesQualityReview
+        };
         var appendedPermissions = new HashSet<string>(contractPermissions, StringComparer.Ordinal);
         appendedPermissions.UnionWith(encounterPermissions);
         appendedPermissions.UnionWith(practitionerPermissions);
         appendedPermissions.UnionWith(billingPermissions);
+        appendedPermissions.UnionWith(physiotherapyPermissions);
+        appendedPermissions.UnionWith(investigationPermissions);
+        appendedPermissions.UnionWith(investigationWorklistPermissions);
+        appendedPermissions.UnionWith(radiologyStudyPermissions);
         var claims = new List<ApplicationRoleClaim>();
         var id = 1;
         // Preserve identifiers already shipped by earlier migrations. Contract and Encounter groups are
@@ -214,6 +242,78 @@ internal sealed class ApplicationIdentitySupportConfiguration :
         }
 
         foreach (var permission in billingPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in physiotherapyPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in physiotherapyPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in investigationPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in investigationPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        // Worklist permissions were introduced after the investigation-order foundation.
+        // Keep this group separate so the previously shipped role-claim identifiers remain stable.
+        foreach (var permission in investigationWorklistPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in investigationWorklistPermissions
+                     .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 2, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        // Radiology study execution permissions follow the independently authorized worklist projection.
+        // Keep the group append-only so claim identifiers 1-134 remain unchanged.
+        foreach (var permission in radiologyStudyPermissions.Order(StringComparer.Ordinal))
+        {
+            claims.Add(new ApplicationRoleClaim
+            {
+                Id = id++, RoleId = 1, ClaimType = BookDocClaimTypes.Permission, ClaimValue = permission
+            });
+        }
+
+        foreach (var permission in radiologyStudyPermissions
                      .Where(FoundationPermissions.BranchAssignable.Contains).Order(StringComparer.Ordinal))
         {
             claims.Add(new ApplicationRoleClaim

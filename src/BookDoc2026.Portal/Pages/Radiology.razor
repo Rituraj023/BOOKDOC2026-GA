@@ -16,21 +16,25 @@
 }
 else if (!CanView)
 {
-    <section class="panel"><h1>Access not granted</h1><p>Your role cannot view radiology queues.</p></section>
+    <section class="panel"><h1>Access not granted</h1><p>Your role cannot view ordered radiology work.</p></section>
 }
 else
 {
-    <div class="page-heading"><div><p class="eyebrow">Operations / Radiology</p><h1>Technician worklist</h1><p>The API remains authoritative; live events trigger a scoped refresh.</p></div><ScopeBadge Label="Branch scoped" /></div>
+    <div class="page-heading"><div><p class="eyebrow">Operations / Radiology</p><h1>Study execution and quality workspace</h1><p>Use the ordered-work list to register/start a Study, record acquisition against eligible equipment, and complete an independent technical-quality review. The API remains authoritative; Queue, Study and Result states stay separate.</p></div><ScopeBadge Label="Branch scoped" /></div>
     <section class="panel selector-panel">
         <label>Imaging service point<select value="@selectedServicePointId" @onchange="SelectServicePointAsync" disabled="@busy"><option value="">Select a service point</option>@foreach (var point in servicePoints) { <option value="@point.Id">@point.Code · @point.Name (@point.Modality)</option> }</select></label>
         <button @onclick="LoadSelectedAsync" disabled="@(busy || string.IsNullOrWhiteSpace(selectedServicePointId))">Refresh</button>
         <span class="connection @connectionClass">@connectionMessage</span>
     </section>
-    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice error-notice">@message</p> }
+    @if (!string.IsNullOrWhiteSpace(message)) { <p class="notice @(isError ? "error-notice" : null)" aria-live="polite">@message</p> }
     @if (selectedServicePoint is not null)
     {
-        <section class="panel"><div class="section-heading"><div><p class="eyebrow">@selectedServicePoint.Modality / @selectedServicePoint.Code</p><h2>@selectedServicePoint.Name</h2></div><span class="muted">@projection.Tickets.Count tickets</span></div>
-            <RadiologyWorklist Tickets="projection.Tickets" CanCall="CanCall" CanProgress="CanProgress" CanCancel="CanCancel" BusyTicketId="busyTicketId" Transition="TransitionAsync" />
+        <section class="panel"><div class="section-heading"><div><p class="eyebrow">@selectedServicePoint.Modality / @selectedServicePoint.Code</p><h2>@selectedServicePoint.Name</h2></div><span class="muted">@projection.Items.Count active orders</span></div>
+            <RadiologyWorklist Items="projection.Items" CanCall="CanCall" CanProgress="CanProgress" CanCancel="CanCancel" CanUseStudy="CanUseStudy" SelectedOrderId="@selectedWork?.OrderId" BusyTicketId="busyTicketId" Transition="TransitionAsync" OpenStudy="OpenStudyAsync" />
+            @if (selectedWork is not null)
+            {
+                <RadiologyStudyWorkspace WorkItem="selectedWork" Study="study" Equipment="equipment" AcquisitionDraft="acquisitionDraft" QualityDraft="qualityDraft" CanStart="CanStartStudy" CanAcquire="CanAcquire" CanReview="CanReview" Busy="busy" Register="RegisterStudyAsync" Start="StartStudyAsync" RecordAcquisition="RecordAcquisitionAsync" ReviewQuality="ReviewQualityAsync" Refresh="RefreshStudyAsync" Close="CloseStudy" />
+            }
         </section>
         @if (CanViewDisplay)
         {
@@ -42,17 +46,28 @@ else
 @code {
     private readonly RadiologyQueueProjection projection = new();
     private readonly SemaphoreSlim loadGate = new(1, 1);
+    private readonly RadiologyAcquisitionDraft acquisitionDraft = new();
+    private readonly RadiologyQualityDraft qualityDraft = new();
     private List<ImagingServicePointResponse> servicePoints = [];
+    private IReadOnlyList<RadiologyEquipmentOptionResponse> equipment = [];
+    private InvestigationWorklistItemResponse? selectedWork;
+    private RadiologyStudyResponse? study;
     private HubConnection? hub;
     private string branchId = string.Empty, selectedServicePointId = string.Empty;
     private string? busyTicketId, message;
     private string connectionMessage = "Live updates not connected", connectionClass = "offline";
-    private bool busy;
-    private bool CanView => Session.HasPermission(FoundationPermissions.QueuesView);
+    private bool busy, isError;
+    private Guid registerRequestId = Guid.NewGuid(), startRequestId = Guid.NewGuid();
+    private bool CanView => Session.HasPermission(FoundationPermissions.InvestigationWorklistView);
     private bool CanViewDisplay => Session.HasPermission(FoundationPermissions.QueuesDisplayView);
     private bool CanCall => Session.HasPermission(FoundationPermissions.QueuesCall);
     private bool CanProgress => Session.HasPermission(FoundationPermissions.QueuesProgress);
     private bool CanCancel => Session.HasPermission(FoundationPermissions.QueuesCancel);
+    private bool CanViewStudy => Session.HasPermission(FoundationPermissions.RadiologyStudiesView);
+    private bool CanStartStudy => Session.HasPermission(FoundationPermissions.RadiologyStudiesStart);
+    private bool CanAcquire => Session.HasPermission(FoundationPermissions.RadiologyAcquisitionsRecord);
+    private bool CanReview => Session.HasPermission(FoundationPermissions.RadiologyStudiesQualityReview);
+    private bool CanUseStudy => CanViewStudy || CanStartStudy || CanAcquire || CanReview;
     private ImagingServicePointResponse? selectedServicePoint => servicePoints.SingleOrDefault(point => point.Id == selectedServicePointId);
 
     protected override async Task OnInitializedAsync()
@@ -81,25 +96,111 @@ else
         try
         {
             await Session.EnsureFreshAsync(Auth);
-            var tickets = await Api.ListQueueTicketsAsync(branchId, selectedServicePointId);
+            var items = await Api.ListInvestigationWorklistAsync(branchId, selectedServicePointId, 100);
             var display = CanViewDisplay ? await Api.GetQueueDisplayAsync(branchId, selectedServicePointId) : [];
-            projection.Replace(tickets, display);
+            projection.Replace(items, display);
+            if (selectedWork is not null)
+            {
+                selectedWork = items.SingleOrDefault(item => item.OrderId == selectedWork.OrderId);
+                if (selectedWork is null) CloseStudy();
+            }
             await InvokeAsync(StateHasChanged);
         }
         finally { loadGate.Release(); }
     }
 
+    private Task OpenStudyAsync(InvestigationWorklistItemResponse item) => RunAsync(async () =>
+    {
+        selectedWork = item;
+        await LoadStudyAsync();
+    });
+
+    private Task RefreshStudyAsync() => RunAsync(LoadStudyAsync);
+
+    private async Task LoadStudyAsync()
+    {
+        if (selectedWork is null) { CloseStudy(); return; }
+        try
+        {
+            study = await Api.GetRadiologyStudyByOrderAsync(branchId, selectedWork.OrderId);
+        }
+        catch (RemoteErrorException exception) when (exception.TransportStatusCode == 404)
+        {
+            study = null;
+        }
+        await LoadEquipmentAsync();
+    }
+
+    private async Task LoadEquipmentAsync()
+    {
+        equipment = study is not null && CanAcquire
+            ? (await Api.ListEligibleRadiologyEquipmentAsync(branchId, study.Id)).ToArray()
+            : [];
+        if (equipment.Count == 1 && string.IsNullOrWhiteSpace(acquisitionDraft.EquipmentResourceId))
+            acquisitionDraft.EquipmentResourceId = equipment[0].Id;
+    }
+
+    private Task RegisterStudyAsync() => MutateStudyAsync(async () =>
+    {
+        var response = await Api.RegisterRadiologyStudyAsync(branchId, selectedWork!.OrderId,
+            new RegisterRadiologyStudyRequest(registerRequestId));
+        registerRequestId = Guid.NewGuid();
+        return response;
+    }, "Study registered. Queue and Result state were not changed.");
+
+    private Task StartStudyAsync() => MutateStudyAsync(async () =>
+    {
+        var response = await Api.StartRadiologyStudyAsync(branchId, study!.Id,
+            new StartRadiologyStudyRequest(startRequestId, study.Version));
+        startRequestId = Guid.NewGuid();
+        return response;
+    }, study?.Status == "RepeatRequired" ? "Approved repeat started." : "Study acquisition started.");
+
+    private Task RecordAcquisitionAsync() => MutateStudyAsync(async () =>
+    {
+        var response = await Api.RecordRadiologyAcquisitionAsync(branchId, study!.Id,
+            acquisitionDraft.ToRequest(study.Version));
+        acquisitionDraft.Reset(equipment.Count == 1 ? equipment[0].Id : null);
+        return response;
+    }, "Immutable acquisition attempt recorded; technical quality is still pending.");
+
+    private Task ReviewQualityAsync() => MutateStudyAsync(async () =>
+    {
+        var response = await Api.ReviewRadiologyQualityAsync(branchId, study!.Id,
+            qualityDraft.ToRequest(study.Version));
+        qualityDraft.Reset();
+        return response;
+    }, qualityDraft.Decision == "RepeatRequired"
+        ? "Repeat required; the prior attempt remains immutable."
+        : "Technical quality accepted; no interpreted Result or release was created.");
+
+    private Task MutateStudyAsync(Func<Task<RadiologyStudyResponse>> operation, string success) => RunAsync(async () =>
+    {
+        study = await operation();
+        await LoadEquipmentAsync();
+        message = success;
+    });
+
+    private void CloseStudy()
+    {
+        selectedWork = null;
+        study = null;
+        equipment = [];
+        acquisitionDraft.Reset();
+        qualityDraft.Reset();
+    }
+
     private async Task TransitionAsync((QueueTicketResponse Ticket, string Action) transition)
     {
-        busyTicketId = transition.Ticket.Id; message = null;
+        busyTicketId = transition.Ticket.Id; ClearMessage();
         try
         {
             await Session.EnsureFreshAsync(Auth);
             await Api.TransitionQueueTicketAsync(branchId, transition.Ticket.Id, transition.Action, new(transition.Ticket.Version));
             await LoadProjectionAsync();
         }
-        catch (RemoteErrorException exception) { message = exception.Error.SafeMessage; await LoadProjectionAsync(); }
-        catch (Exception exception) { message = exception.Message; }
+        catch (RemoteErrorException exception) { Fail(exception.Error.SafeMessage); await LoadProjectionAsync(); }
+        catch (Exception exception) { Fail(exception.Message); }
         finally { busyTicketId = null; }
     }
 
@@ -122,14 +223,17 @@ else
 
     private async Task RunAsync(Func<Task> operation)
     {
-        busy = true; message = null;
+        busy = true; ClearMessage();
         try { await Session.EnsureFreshAsync(Auth); await operation(); }
-        catch (PortalSessionRequiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
-        catch (PortalSessionExpiredException exception) { message = exception.Message; Navigation.NavigateTo("/login"); }
-        catch (RemoteErrorException exception) { message = exception.Error.SafeMessage; }
-        catch (Exception exception) { message = exception.Message; }
+        catch (PortalSessionRequiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException exception) { Fail(exception.Message); Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException exception) { Fail(exception.Error.SafeMessage); }
+        catch (Exception exception) { Fail(exception.Message); }
         finally { busy = false; }
     }
+
+    private void Fail(string value) { message = value; isError = true; }
+    private void ClearMessage() { message = null; isError = false; }
 
     public async ValueTask DisposeAsync()
     {

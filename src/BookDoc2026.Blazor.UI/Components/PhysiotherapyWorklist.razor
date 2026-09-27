@@ -1,0 +1,32 @@
+@if (Items.Count == 0)
+{
+    <p class="worklist-empty">No Physiotherapy care plans match this view.</p>
+}
+else
+{
+    <div class="worklist-wrap">
+        <table class="worklist-table">
+            <thead><tr><th>Patient</th><th>Care plan</th><th>Status</th><th>Review</th><th>Sessions</th><th>Last session</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var item in Items)
+            {
+                <tr class="@(item.CarePlanNumber == SelectedCarePlanNumber ? "selected" : null)">
+                    <td><strong>@item.PatientDisplayName</strong><small>@item.PatientNumber</small></td>
+                    <td>@item.CarePlanNumber <small>Revision @item.LatestRevisionNumber</small></td>
+                    <td><PhysiotherapyStatusBadge Status="@item.Status" /></td>
+                    <td>@(item.ReviewOn?.ToString("dd MMM yyyy") ?? "Not set")</td>
+                    <td>@item.SessionCount</td>
+                    <td>@(item.LastSessionUtc?.ToLocalTime().ToString("g") ?? "—")</td>
+                    <td><button type="button" @onclick="() => Select.InvokeAsync(item.Id)">Open</button></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PhysiotherapyCarePlanListItemResponse> Items { get; set; } = [];
+    [Parameter] public string? SelectedCarePlanNumber { get; set; }
+    [Parameter] public EventCallback<string> Select { get; set; }
+}

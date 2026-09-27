@@ -41,6 +41,20 @@ public sealed class EncounterService(
             ?? throw new NotFoundException("Encounter was not found."));
     }
 
+    public async Task<IReadOnlyCollection<ClinicalAgendaItemResponse>> ListAgendaAsync(long branchId,
+        DateOnly localDate, int take, CancellationToken cancellationToken)
+    {
+        var branch = await RequireBranchAsync(FoundationPermissions.EncountersView, branchId, cancellationToken);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(branch.TimeZoneId);
+        var startLocal = DateTime.SpecifyKind(localDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Unspecified);
+        var endLocal = startLocal.AddDays(1);
+        var startUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(startLocal, zone), TimeSpan.Zero);
+        var endUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(endLocal, zone), TimeSpan.Zero);
+        var limited = Math.Clamp(take, 1, 100);
+        return (await repository.ListAgendaAsync(branchId, actor.ActorId, localDate, startUtc, endUtc, limited,
+            cancellationToken)).Select(item => Map(item, branch.TenantId)).ToArray();
+    }
+
     public Task<EncounterResponse> ReviseDraftAsync(long branchId, long encounterId,
         ReviseEncounterDraftRequest request, CancellationToken cancellationToken) =>
         ChangeAsync(branchId, encounterId, FoundationPermissions.EncounterDraftsManage, "Encounter.DraftRevised",
@@ -124,4 +138,14 @@ public sealed class EncounterService(
             revision.ChiefComplaint, revision.History, revision.Examination, revision.Assessment, revision.Plan,
             revision.Instructions, revision.BodySite, revision.LateralityCode),
         revision.ContentHash, revision.AmendmentReason, revision.SignedUtc, revision.CreatedUtc);
+
+    private ClinicalAgendaItemResponse Map(ClinicalAgendaWorkItem item, long tenantId) => new(
+        publicIds.Encode(PublicIdKind.Booking, item.Booking.Id, tenantId), item.Booking.BookingNumber,
+        publicIds.Encode(PublicIdKind.Patient, item.Booking.PatientId, tenantId), item.PatientNumber,
+        item.PatientDisplayName, publicIds.Encode(PublicIdKind.ClinicalService, item.Booking.ServiceId, tenantId),
+        item.ServiceCode, item.ServiceName, item.Booking.StartUtc, item.Booking.EndUtc,
+        item.Encounter is null ? null : publicIds.Encode(PublicIdKind.Encounter, item.Encounter.Id, tenantId),
+        item.Encounter?.EncounterNumber, item.Encounter?.Status.ToString(), item.Encounter?.Version,
+        item.CarePlan is null ? null : publicIds.Encode(PublicIdKind.PhysiotherapyCarePlan, item.CarePlan.Id, tenantId),
+        item.CarePlan?.CarePlanNumber, item.CarePlan?.Status.ToString());
 }

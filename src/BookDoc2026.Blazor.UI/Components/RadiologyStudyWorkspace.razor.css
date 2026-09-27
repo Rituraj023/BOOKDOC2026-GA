@@ -1,0 +1,26 @@
+.study-workspace { display: grid; gap: 1rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #dbe4ec; }
+.workspace-heading, .workspace-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.workspace-heading h3, .command-card h4, .history-block h4 { margin: 0 0 .45rem; }
+.workspace-heading p { margin: .2rem 0; }
+.workspace-eyebrow { color: #28707a; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.boundary-note { margin: 0; padding: .8rem 1rem; border-left: 4px solid #0e7490; background: #ecfeff; }
+.study-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.study-summary div { padding: .75rem; border: 1px solid #e2e8f0; border-radius: .65rem; background: #f8fafc; }
+.study-summary dt { color: #64748b; font-size: .72rem; text-transform: uppercase; }
+.study-summary dd { margin: .3rem 0 0; font-weight: 750; }
+.command-card { padding: 1rem; border: 1px solid #dbe4ec; border-radius: .75rem; background: #fbfdff; }
+.quality-card { border-left: 4px solid #7c3aed; }
+.radiology-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; margin: .9rem 0; }
+.radiology-form-grid .wide { grid-column: 1 / -1; }
+.check-field { display: flex; align-items: center; align-self: end; grid-auto-flow: column; justify-content: start; }
+.check-field input { width: auto; }
+.primary-command { color: white; background: #087e8b; border-color: #087e8b; }
+.completion-note, .warning-note { padding: .85rem 1rem; border-radius: .65rem; }
+.completion-note { color: #166534; background: #dcfce7; }
+.warning-note { color: #92400e; background: #fef3c7; }
+.history-list { display: grid; gap: .75rem; }
+.history-list article { padding: .85rem 1rem; border: 1px solid #e2e8f0; border-radius: .65rem; }
+.history-list article > div { display: flex; justify-content: space-between; gap: 1rem; }
+.history-list p { margin: .4rem 0 0; color: #64748b; }
+.history-list .review-line { color: #4c1d95; }
+@media (max-width: 760px) { .workspace-heading, .workspace-actions { flex-direction: column; } .study-summary, .radiology-form-grid { grid-template-columns: 1fr; } .radiology-form-grid .wide { grid-column: auto; } }

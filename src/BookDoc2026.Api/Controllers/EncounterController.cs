@@ -13,6 +13,15 @@ namespace BookDoc2026.Api.Controllers;
 [Route("api/v1/branches/{branchId}/encounters")]
 public sealed class EncounterController(EncounterService service, HttpPublicIdDecoder ids) : ControllerBase
 {
+    [Authorize(Policy = FoundationPermissions.EncountersView)]
+    [HttpGet("agenda")]
+    public async Task<ActionResult<ApiEnvelope<IReadOnlyCollection<ClinicalAgendaItemResponse>>>> Agenda(
+        string branchId, [FromQuery] DateOnly date, [FromQuery] int take = 50,
+        CancellationToken cancellationToken = default) => Ok(
+        new ApiEnvelope<IReadOnlyCollection<ClinicalAgendaItemResponse>>(
+            await service.ListAgendaAsync(ids.Tenant(PublicIdKind.Branch, branchId), date, take,
+                cancellationToken), HttpContext.TraceIdentifier));
+
     [Authorize(Policy = FoundationPermissions.EncounterDraftsManage)]
     [HttpPost]
     public async Task<ActionResult<ApiEnvelope<EncounterResponse>>> Start(

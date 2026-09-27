@@ -30,6 +30,7 @@ public sealed record QueueTicketResponse(
     string ServicePointId,
     string PatientId,
     string? BookingId,
+    string? InvestigationOrderId,
     string DisplayToken,
     string Priority,
     string Status,

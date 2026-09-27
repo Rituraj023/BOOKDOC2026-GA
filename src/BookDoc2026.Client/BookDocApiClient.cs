@@ -6,6 +6,7 @@ using BookDoc2026.Contracts.Contracts;
 using BookDoc2026.Contracts.Clinical;
 using BookDoc2026.Contracts.Patients;
 using BookDoc2026.Contracts.Queues;
+using BookDoc2026.Contracts.Radiology;
 using BookDoc2026.Contracts.Scheduling;
 using BookDoc2026.Contracts.Workforce;
 
@@ -13,6 +14,50 @@ namespace BookDoc2026.Client;
 
 public sealed class BookDocApiClient(HttpClient httpClient)
 {
+    public Task<IReadOnlyCollection<PhysiotherapyCarePlanListItemResponse>> ListPhysiotherapyCarePlansAsync(
+        string branchId, int take = 50, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<PhysiotherapyCarePlanListItemResponse>>(
+            $"{PhysiotherapyUrl(branchId)}?take={Math.Clamp(take, 1, 100)}", cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> CreatePhysiotherapyCarePlanAsync(string branchId,
+        CreatePhysiotherapyCarePlanRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<CreatePhysiotherapyCarePlanRequest, PhysiotherapyCarePlanResponse>(
+            PhysiotherapyUrl(branchId), request, cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> GetPhysiotherapyCarePlanAsync(string branchId, string carePlanId,
+        CancellationToken cancellationToken = default) => GetAsync<PhysiotherapyCarePlanResponse>(
+        PhysiotherapyUrl(branchId, carePlanId), cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> RevisePhysiotherapyCarePlanAsync(string branchId, string carePlanId,
+        RevisePhysiotherapyCarePlanRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<RevisePhysiotherapyCarePlanRequest, PhysiotherapyCarePlanResponse>(
+            $"{PhysiotherapyUrl(branchId, carePlanId)}/revisions", request, cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> ActivatePhysiotherapyCarePlanAsync(string branchId,
+        string carePlanId, ActivatePhysiotherapyCarePlanRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ActivatePhysiotherapyCarePlanRequest, PhysiotherapyCarePlanResponse>(
+            $"{PhysiotherapyUrl(branchId, carePlanId)}/activate", request, cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> ClosePhysiotherapyCarePlanAsync(string branchId,
+        string carePlanId, ChangePhysiotherapyCarePlanStatusRequest request, bool discontinued,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<ChangePhysiotherapyCarePlanStatusRequest, PhysiotherapyCarePlanResponse>(
+            $"{PhysiotherapyUrl(branchId, carePlanId)}/{(discontinued ? "discontinue" : "complete")}",
+            request, cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> RecordPhysiotherapySessionAsync(string branchId,
+        string carePlanId, RecordPhysiotherapySessionRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<RecordPhysiotherapySessionRequest, PhysiotherapyCarePlanResponse>(
+            $"{PhysiotherapyUrl(branchId, carePlanId)}/sessions", request, cancellationToken);
+
+    public Task<PhysiotherapyCarePlanResponse> RecordPhysiotherapyOutcomeAsync(string branchId,
+        string carePlanId, RecordPhysiotherapyOutcomeRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<RecordPhysiotherapyOutcomeRequest, PhysiotherapyCarePlanResponse>(
+            $"{PhysiotherapyUrl(branchId, carePlanId)}/outcomes", request, cancellationToken);
+
     public Task<IReadOnlyCollection<InvoiceResponse>> ListInvoicesAsync(string branchId, int take = 50,
         CancellationToken cancellationToken = default) => GetAsync<IReadOnlyCollection<InvoiceResponse>>(
         $"{BillingUrl(branchId, "invoices")}?take={take}", cancellationToken);
@@ -104,6 +149,12 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         PostAsync<StartEncounterRequest, EncounterResponse>(
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters", request, cancellationToken);
 
+    public Task<IReadOnlyCollection<ClinicalAgendaItemResponse>> ListClinicalAgendaAsync(string branchId,
+        DateOnly date, int take = 50, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<ClinicalAgendaItemResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/agenda" +
+            $"?date={date:yyyy-MM-dd}&take={Math.Clamp(take, 1, 100)}", cancellationToken);
+
     public Task<EncounterResponse> GetEncounterAsync(
         string branchId, string encounterId, CancellationToken cancellationToken = default) =>
         GetAsync<EncounterResponse>(
@@ -129,6 +180,32 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         CancellationToken cancellationToken = default) =>
         PostAsync<AmendEncounterRequest, EncounterResponse>(
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/amendments",
+            request, cancellationToken);
+
+    public Task<IReadOnlyCollection<InvestigationOrderResponse>> ListInvestigationOrdersAsync(
+        string branchId, string encounterId, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<InvestigationOrderResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/investigation-orders",
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<InvestigationServiceOptionResponse>> ListInvestigationCatalogOptionsAsync(
+        string branchId, string encounterId, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<InvestigationServiceOptionResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/investigation-orders/catalog-options",
+            cancellationToken);
+
+    public Task<InvestigationOrderResponse> CreateInvestigationOrderAsync(
+        string branchId, string encounterId, CreateInvestigationOrderRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<CreateInvestigationOrderRequest, InvestigationOrderResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/investigation-orders",
+            request, cancellationToken);
+
+    public Task<InvestigationOrderResponse> HandoffInvestigationOrderAsync(
+        string branchId, string encounterId, string orderId, HandoffInvestigationOrderRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<HandoffInvestigationOrderRequest, InvestigationOrderResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/encounters/{Uri.EscapeDataString(encounterId)}/investigation-orders/{Uri.EscapeDataString(orderId)}/queue-handoffs",
             request, cancellationToken);
 
     public Task<ContractResponse> CreateContractAsync(
@@ -209,6 +286,48 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         GetAsync<IReadOnlyCollection<QueueTicketResponse>>(
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/queues/imaging-service-points/{Uri.EscapeDataString(servicePointId)}/tickets",
             cancellationToken);
+
+    public Task<IReadOnlyCollection<InvestigationWorklistItemResponse>> ListInvestigationWorklistAsync(
+        string branchId,
+        string servicePointId,
+        int take = 100,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<InvestigationWorklistItemResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/investigations/worklist?servicePointId={Uri.EscapeDataString(servicePointId)}&take={take}",
+            cancellationToken);
+
+    public Task<RadiologyStudyResponse> GetRadiologyStudyByOrderAsync(string branchId, string orderId,
+        CancellationToken cancellationToken = default) => GetAsync<RadiologyStudyResponse>(
+        RadiologyOrderStudyUrl(branchId, orderId), cancellationToken);
+
+    public Task<RadiologyStudyResponse> GetRadiologyStudyAsync(string branchId, string studyId,
+        CancellationToken cancellationToken = default) => GetAsync<RadiologyStudyResponse>(
+        RadiologyStudyUrl(branchId, studyId), cancellationToken);
+
+    public Task<RadiologyStudyResponse> RegisterRadiologyStudyAsync(string branchId, string orderId,
+        RegisterRadiologyStudyRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<RegisterRadiologyStudyRequest, RadiologyStudyResponse>(
+            RadiologyOrderStudyUrl(branchId, orderId), request, cancellationToken);
+
+    public Task<RadiologyStudyResponse> StartRadiologyStudyAsync(string branchId, string studyId,
+        StartRadiologyStudyRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<StartRadiologyStudyRequest, RadiologyStudyResponse>(
+            $"{RadiologyStudyUrl(branchId, studyId)}/start", request, cancellationToken);
+
+    public Task<IReadOnlyCollection<RadiologyEquipmentOptionResponse>> ListEligibleRadiologyEquipmentAsync(
+        string branchId, string studyId, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<RadiologyEquipmentOptionResponse>>(
+            $"{RadiologyStudyUrl(branchId, studyId)}/eligible-equipment", cancellationToken);
+
+    public Task<RadiologyStudyResponse> RecordRadiologyAcquisitionAsync(string branchId, string studyId,
+        RecordRadiologyAcquisitionRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<RecordRadiologyAcquisitionRequest, RadiologyStudyResponse>(
+            $"{RadiologyStudyUrl(branchId, studyId)}/acquisitions", request, cancellationToken);
+
+    public Task<RadiologyStudyResponse> ReviewRadiologyQualityAsync(string branchId, string studyId,
+        ReviewRadiologyQualityRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<ReviewRadiologyQualityRequest, RadiologyStudyResponse>(
+            $"{RadiologyStudyUrl(branchId, studyId)}/quality-reviews", request, cancellationToken);
 
     public Task<IReadOnlyCollection<QueueDisplayTicketResponse>> GetQueueDisplayAsync(
         string branchId,
@@ -421,4 +540,16 @@ public sealed class BookDocApiClient(HttpClient httpClient)
 
     private static string BillingUrl(string branchId, string path) =>
         $"api/v1/branches/{Uri.EscapeDataString(branchId)}/billing/{path}";
+
+    private static string PhysiotherapyUrl(string branchId, string? carePlanId = null) =>
+        $"api/v1/branches/{Uri.EscapeDataString(branchId)}/physiotherapy/care-plans" +
+        (string.IsNullOrWhiteSpace(carePlanId) ? string.Empty : $"/{Uri.EscapeDataString(carePlanId)}");
+
+    private static string RadiologyOrderStudyUrl(string branchId, string orderId) =>
+        $"api/v1/branches/{Uri.EscapeDataString(branchId)}/investigation-orders/" +
+        $"{Uri.EscapeDataString(orderId)}/radiology-study";
+
+    private static string RadiologyStudyUrl(string branchId, string studyId) =>
+        $"api/v1/branches/{Uri.EscapeDataString(branchId)}/radiology/studies/" +
+        Uri.EscapeDataString(studyId);
 }

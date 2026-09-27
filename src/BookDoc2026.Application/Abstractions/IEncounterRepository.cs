@@ -11,12 +11,24 @@ public sealed record EncounterAggregate(
     public EncounterRevision Latest => Revisions.Single(item => item.Id == Encounter.LatestRevisionId);
 }
 
+public sealed record ClinicalAgendaWorkItem(
+    Booking Booking,
+    string PatientNumber,
+    string PatientDisplayName,
+    string ServiceCode,
+    string ServiceName,
+    ClinicalEncounter? Encounter,
+    PhysiotherapyCarePlan? CarePlan);
+
 public interface IEncounterRepository
 {
     Task<Branch?> GetBranchAsync(long branchId, CancellationToken cancellationToken);
     Task<Booking?> GetBookingAsync(long branchId, long bookingId, CancellationToken cancellationToken);
     Task<bool> EncounterExistsForBookingAsync(long branchId, long bookingId, CancellationToken cancellationToken);
     Task<EncounterAggregate?> GetEncounterAsync(long branchId, long encounterId, bool tracked,
+        CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ClinicalAgendaWorkItem>> ListAgendaAsync(long branchId, long actorId,
+        DateOnly localDate, DateTimeOffset startUtc, DateTimeOffset endUtc, int take,
         CancellationToken cancellationToken);
     Task AddEncounterAsync(ClinicalEncounter encounter, EncounterRevision revision, AuditEvent auditEvent,
         CancellationToken cancellationToken);

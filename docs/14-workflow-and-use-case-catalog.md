@@ -31,15 +31,17 @@ Every workflow receives a stable ID, actors, trigger, preconditions, normal path
 - `SCH-03` reschedule, cancel, waitlist, no-show and follow-up with lineage.
 - `QUE-01` check in a booked or walk-in patient and issue queue ticket.
 - `QUE-02` call, hold, skip, transfer, prioritize and complete a ticket with reasoned exceptions.
-- `IMG-01` move an X-ray/CT/MRI order through arrival, preparation, scan, quality, reporting and release.
+- `IMG-01` move an X-ray/CT/MRI order through arrival, preparation, scan, quality, reporting and release. DOC-055 implements configured X-ray/CT Order request and Queue handoff/progression; DOC-056 adds the least-privilege technician ordered-work context. DOC-058 implements independent X-ray/CT Study registration/start, immutable acquisition attempts and explicit technical-quality accept/repeat decisions; [DOC-059](59-portal-radiology-execution-quality-workspace.md) proves those commands through separate authenticated operator/reviewer Portal sessions under provisional Slice-A policy. Interpretation, report signing, critical communication, release and snapshots remain unimplemented and independently gated by DOC-057.
 
 ## Clinical workflows
+
+- Assigned clinical handoff: an active verified Practitioner sees only confirmed Bookings matching effective branch/Service/resource assignments, appends and signs the common Encounter, then follows an explicitly supported specialty handoff. DOC-053 implements the policy-neutral Portal reference path for Physiotherapy.
 
 - `ENC-01` open encounter from authorized booking/walk-in.
 - `ENC-02` capture complaint, history, allergies, vitals, findings, diagnosis, procedures and plan.
 - `ENC-03` draft, sign and amend an encounter without overwriting signed content.
 - `RX-01` prescribe, issue, amend/cancel and share a prescription.
-- `INV-01` order investigation, collect/perform, enter, verify and release result.
+- `INV-01` order investigation, collect/perform, enter, verify and release result. DOC-055 implements the policy-neutral signed-Encounter request plus one Queue handoff while preserving independent Order, Result and Queue state; DOC-056 exposes only the bounded context a permitted technician needs for that active Queue work. DOC-058/059 add and render performed/acquisition and independent technical-quality evidence without fabricating Result state. Interpretation, clinical verification/signing, critical acknowledgement and release remain unimplemented until their DOC-057 RAD decision gate passes.
 - `PHY-01` complete physiotherapy assessment with pain, range-of-motion, strength and functional baseline.
 - `PHY-02` approve a goals-based treatment plan, schedule a course of sessions and record consent/precautions.
 - `PHY-03` document each therapy session, interventions/modalities, exercise program, response and next plan.

@@ -105,6 +105,18 @@ builder.Services.AddAuthorization(options =>
     AddPermissionPolicy(FoundationPermissions.EncounterDraftsManage, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.EncountersSign, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.EncountersAmend, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.InvestigationsView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.InvestigationOrdersCreate, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.InvestigationQueueHandoff, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.InvestigationWorklistView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.RadiologyStudiesView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.RadiologyStudiesStart, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.RadiologyAcquisitionsRecord, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.RadiologyStudiesQualityReview, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PhysiotherapyCarePlansView, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PhysiotherapyCarePlansManage, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PhysiotherapySessionsRecord, platformOnly: false);
+    AddPermissionPolicy(FoundationPermissions.PhysiotherapyOutcomesRecord, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.PractitionersView, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.PractitionersManage, platformOnly: false);
     AddPermissionPolicy(FoundationPermissions.PractitionerCredentialsVerify, platformOnly: false);

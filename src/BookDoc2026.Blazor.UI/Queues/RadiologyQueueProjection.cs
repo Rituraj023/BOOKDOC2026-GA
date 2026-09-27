@@ -1,3 +1,4 @@
+using BookDoc2026.Contracts.Clinical;
 using BookDoc2026.Contracts.Queues;
 
 namespace BookDoc2026.Blazor.UI.Queues;
@@ -8,14 +9,14 @@ namespace BookDoc2026.Blazor.UI.Queues;
 /// </summary>
 public sealed class RadiologyQueueProjection
 {
-    public IReadOnlyList<QueueTicketResponse> Tickets { get; private set; } = [];
+    public IReadOnlyList<InvestigationWorklistItemResponse> Items { get; private set; } = [];
     public IReadOnlyList<QueueDisplayTicketResponse> DisplayTickets { get; private set; } = [];
 
     public void Replace(
-        IEnumerable<QueueTicketResponse> tickets,
+        IEnumerable<InvestigationWorklistItemResponse> items,
         IEnumerable<QueueDisplayTicketResponse> displayTickets)
     {
-        Tickets = tickets.ToArray();
+        Items = items.ToArray();
         DisplayTickets = displayTickets.ToArray();
     }
 

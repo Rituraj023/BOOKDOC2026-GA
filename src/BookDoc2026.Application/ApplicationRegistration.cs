@@ -7,6 +7,7 @@ using BookDoc2026.Application.Contracts;
 using BookDoc2026.Application.Foundation;
 using BookDoc2026.Application.Patients;
 using BookDoc2026.Application.Queues;
+using BookDoc2026.Application.Radiology;
 using BookDoc2026.Application.Scheduling;
 using BookDoc2026.Application.Stakeholders;
 using BookDoc2026.Application.Workforce;
@@ -27,6 +28,9 @@ public static class ApplicationRegistration
         services.AddScoped<CommunicationService>();
         services.AddScoped<ContractService>();
         services.AddScoped<EncounterService>();
+        services.AddScoped<InvestigationService>();
+        services.AddScoped<RadiologyStudyService>();
+        services.AddScoped<PhysiotherapyService>();
         services.AddScoped<PractitionerService>();
         services.AddScoped<IPractitionerEligibility>(services => services.GetRequiredService<PractitionerService>());
         services.AddScoped<BillingService>();
