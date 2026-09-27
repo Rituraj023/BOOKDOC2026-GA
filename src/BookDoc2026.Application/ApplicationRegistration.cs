@@ -32,6 +32,8 @@ public static class ApplicationRegistration
         services.AddScoped<CommunicationService>();
         services.AddScoped<ContractService>();
         services.AddScoped<EncounterService>();
+        services.AddScoped<VitalsService>();
+        services.AddScoped<IVitalsService>(sp => sp.GetRequiredService<VitalsService>());
         services.AddScoped<InvestigationService>();
         services.AddScoped<RadiologyStudyService>();
         services.AddScoped<PhysiotherapyService>();

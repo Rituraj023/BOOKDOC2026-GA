@@ -67,3 +67,33 @@ internal sealed class EncounterRevisionConfiguration : IEntityTypeConfiguration<
             .HasPrincipalKey(item => new { item.TenantId, item.Id });
     }
 }
+
+internal sealed class PatientVitalSignsConfiguration : IEntityTypeConfiguration<PatientVitalSigns>
+{
+    public void Configure(EntityTypeBuilder<PatientVitalSigns> builder)
+    {
+        builder.ToTable("patient_vital_signs", "clinical");
+        builder.HasKey(item => item.Id);
+        builder.HasAlternateKey(item => new { item.TenantId, item.Id });
+        builder.Property(item => item.TemperatureF).HasPrecision(5, 2);
+        builder.Property(item => item.WeightKg).HasPrecision(6, 2);
+        builder.Property(item => item.HeightCm).HasPrecision(6, 2);
+        builder.Property(item => item.Bmi).HasPrecision(5, 2);
+        builder.Property(item => item.BloodGlucoseMgDl).HasPrecision(6, 2);
+        builder.Property(item => item.RecordedByActorId).HasMaxLength(128);
+        builder.Property(item => item.ClinicalNotes).HasMaxLength(1000);
+        builder.Property(item => item.Version).IsConcurrencyToken();
+
+        builder.HasIndex(item => new { item.TenantId, item.BranchId, item.PatientId, item.RecordedUtc });
+        builder.HasIndex(item => new { item.TenantId, item.BranchId, item.BookingId });
+        builder.HasIndex(item => new { item.TenantId, item.BranchId, item.ClinicalEncounterId });
+
+        builder.HasOne<Branch>().WithMany()
+            .HasForeignKey(item => new { item.TenantId, item.BranchId })
+            .HasPrincipalKey(item => new { item.TenantId, item.Id });
+
+        builder.HasOne<Patient>().WithMany()
+            .HasForeignKey(item => new { item.TenantId, item.PatientId })
+            .HasPrincipalKey(item => new { item.TenantId, item.Id });
+    }
+}

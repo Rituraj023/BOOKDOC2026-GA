@@ -100,6 +100,7 @@ public sealed class BookDocDbContext(
     public DbSet<EntitlementReservation> EntitlementReservations => Set<EntitlementReservation>();
     public DbSet<ClinicalEncounter> ClinicalEncounters => Set<ClinicalEncounter>();
     public DbSet<EncounterRevision> EncounterRevisions => Set<EncounterRevision>();
+    public DbSet<PatientVitalSigns> PatientVitalSigns => Set<PatientVitalSigns>();
     public DbSet<InvestigationOrder> InvestigationOrders => Set<InvestigationOrder>();
     public DbSet<InvestigationOrderEvent> InvestigationOrderEvents => Set<InvestigationOrderEvent>();
     public DbSet<RadiologyStudy> RadiologyStudies => Set<RadiologyStudy>();
@@ -194,6 +195,8 @@ public sealed class BookDocDbContext(
         modelBuilder.Entity<ClinicalEncounter>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<EncounterRevision>()
+            .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
+        modelBuilder.Entity<PatientVitalSigns>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);
         modelBuilder.Entity<InvestigationOrder>()
             .HasQueryFilter(entity => CurrentTenantId.HasValue && entity.TenantId == CurrentTenantId.Value);

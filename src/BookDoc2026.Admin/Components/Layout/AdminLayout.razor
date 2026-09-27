@@ -9,6 +9,18 @@
     <nav>
         @if (Session.IsAuthenticated)
         {
+            @if (CanAccessOpdReception)
+            {
+                <a href="/opd/reception">OPD Reception</a>
+            }
+            @if (CanAccessOpdTriage)
+            {
+                <a href="/opd/triage">Nurse Triage</a>
+            }
+            @if (CanAccessOpdDoctorConsultation)
+            {
+                <a href="/opd/doctor-consultation">Doctor OPD</a>
+            }
             @if (CanManageDoctorSlots)
             {
                 <a href="/scheduling/slots">Doctor Slots</a>
@@ -46,6 +58,9 @@
 <main class="shell">@Body</main>
 
 @code {
+    private bool CanAccessOpdReception => AdminPermissionPolicy.CanAccessOpdReception(Session.Permissions);
+    private bool CanAccessOpdTriage => AdminPermissionPolicy.CanAccessOpdTriage(Session.Permissions);
+    private bool CanAccessOpdDoctorConsultation => AdminPermissionPolicy.CanAccessOpdDoctorConsultation(Session.Permissions);
     private bool CanManageDoctorSlots => AdminPermissionPolicy.CanManageDoctorSlots(Session.Permissions);
     private bool CanReviewBookingRequests => AdminPermissionPolicy.CanReviewBookingRequests(Session.Permissions);
     private bool CanViewCommunications => AdminPermissionPolicy.CanAccessCommunications(Session.Permissions);

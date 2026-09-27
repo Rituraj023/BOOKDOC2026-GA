@@ -740,4 +740,34 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         PostAsync<RescheduleBookingRequestNotice, BookingRequestResponse>(
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/booking-requests/{Uri.EscapeDataString(requestId)}/reschedule",
             command, cancellationToken);
+
+    public Task<VitalSignsResponse> RecordVitalsAsync(
+        string branchId, string patientId, RecordVitalSignsRequest request, CancellationToken cancellationToken = default) =>
+        PostAsync<RecordVitalSignsRequest, VitalSignsResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/{Uri.EscapeDataString(patientId)}/vitals",
+            request, cancellationToken);
+
+    public Task<VitalSignsResponse?> GetLatestVitalsAsync(
+        string branchId, string patientId, CancellationToken cancellationToken = default) =>
+        GetAsync<VitalSignsResponse?>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/{Uri.EscapeDataString(patientId)}/vitals/latest",
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<VitalSignsResponse>> ListVitalsHistoryAsync(
+        string branchId, string patientId, int take = 10, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<VitalSignsResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/{Uri.EscapeDataString(patientId)}/vitals/history?take={take}",
+            cancellationToken);
+
+    public Task<VitalSignsResponse?> GetVitalsByBookingAsync(
+        string branchId, string bookingId, CancellationToken cancellationToken = default) =>
+        GetAsync<VitalSignsResponse?>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/vitals/by-booking/{Uri.EscapeDataString(bookingId)}",
+            cancellationToken);
+
+    public Task<VitalSignsResponse?> GetVitalsByEncounterAsync(
+        string branchId, string encounterId, CancellationToken cancellationToken = default) =>
+        GetAsync<VitalSignsResponse?>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/vitals/by-encounter/{Uri.EscapeDataString(encounterId)}",
+            cancellationToken);
 }

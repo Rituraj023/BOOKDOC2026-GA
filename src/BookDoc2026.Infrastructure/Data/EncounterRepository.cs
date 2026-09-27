@@ -128,6 +128,37 @@ public sealed class EncounterRepository(BookDocDbContext dbContext) : IEncounter
         await dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken);
     }
 
+    public async Task AddVitalSignsAsync(PatientVitalSigns vitals, AuditEvent auditEvent, CancellationToken cancellationToken)
+    {
+        await dbContext.PatientVitalSigns.AddAsync(vitals, cancellationToken);
+        await dbContext.AuditEvents.AddAsync(auditEvent, cancellationToken);
+    }
+
+    public Task<PatientVitalSigns?> GetLatestVitalSignsAsync(long branchId, long patientId, CancellationToken cancellationToken) =>
+        dbContext.PatientVitalSigns.AsNoTracking()
+            .Where(v => v.BranchId == branchId && v.PatientId == patientId)
+            .OrderByDescending(v => v.RecordedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyCollection<PatientVitalSigns>> ListVitalSignsAsync(long branchId, long patientId, int take, CancellationToken cancellationToken) =>
+        await dbContext.PatientVitalSigns.AsNoTracking()
+            .Where(v => v.BranchId == branchId && v.PatientId == patientId)
+            .OrderByDescending(v => v.RecordedUtc)
+            .Take(take)
+            .ToArrayAsync(cancellationToken);
+
+    public Task<PatientVitalSigns?> GetVitalSignsByBookingAsync(long branchId, long bookingId, CancellationToken cancellationToken) =>
+        dbContext.PatientVitalSigns.AsNoTracking()
+            .Where(v => v.BranchId == branchId && v.BookingId == bookingId)
+            .OrderByDescending(v => v.RecordedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public Task<PatientVitalSigns?> GetVitalSignsByEncounterAsync(long branchId, long encounterId, CancellationToken cancellationToken) =>
+        dbContext.PatientVitalSigns.AsNoTracking()
+            .Where(v => v.BranchId == branchId && v.ClinicalEncounterId == encounterId)
+            .OrderByDescending(v => v.RecordedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try { await dbContext.SaveChangesAsync(cancellationToken); }

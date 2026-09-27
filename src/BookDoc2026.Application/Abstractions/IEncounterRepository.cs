@@ -33,5 +33,10 @@ public interface IEncounterRepository
     Task AddEncounterAsync(ClinicalEncounter encounter, EncounterRevision revision, AuditEvent auditEvent,
         CancellationToken cancellationToken);
     Task AddRevisionAsync(EncounterRevision revision, AuditEvent auditEvent, CancellationToken cancellationToken);
+    Task AddVitalSignsAsync(PatientVitalSigns vitals, AuditEvent auditEvent, CancellationToken cancellationToken);
+    Task<PatientVitalSigns?> GetLatestVitalSignsAsync(long branchId, long patientId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<PatientVitalSigns>> ListVitalSignsAsync(long branchId, long patientId, int take, CancellationToken cancellationToken);
+    Task<PatientVitalSigns?> GetVitalSignsByBookingAsync(long branchId, long bookingId, CancellationToken cancellationToken);
+    Task<PatientVitalSigns?> GetVitalSignsByEncounterAsync(long branchId, long encounterId, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

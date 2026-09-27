@@ -1,0 +1,509 @@
+@page "/opd/reception"
+@using BookDoc2026.Contracts.Catalog
+@using BookDoc2026.Contracts.Contracts
+@using BookDoc2026.Contracts.Patients
+@using BookDoc2026.Contracts.Queues
+@using BookDoc2026.Contracts.Stakeholders
+@using BookDoc2026.Contracts.Workforce
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject AdminSessionState Session
+@inject IJSRuntime JS
+
+<PageTitle>OPD Reception Desk | BOOKDOC2026 ERP</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel">
+        <h1>Session required</h1>
+        <p>Sign in to access OPD Reception Desk.</p>
+        <a class="primary-link" href="/login">Sign in</a>
+    </section>
+}
+else if (!CanAccess)
+{
+    <section class="panel">
+        <h1>Access not granted</h1>
+        <p>OPD Reception permissions are required for front desk operations.</p>
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Clinic ERP / Front Desk</p>
+            <h1>OPD Reception & Token Generation</h1>
+            <p>Walk-in patient search, family member selection, doctor room assignment, and daily token generation.</p>
+        </div>
+        <ScopeBadge Label="Intranet ERP" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="notice @(isError ? "error-notice" : "success-notice")" aria-live="polite">@message</p>
+    }
+
+    <!-- Branch Selector if not preset in session -->
+    <section class="panel" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 16px; align-items: flex-end;">
+            <div style="flex: 1;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Branch Protected ID</label>
+                <input type="text" placeholder="Branch ID..." @bind="branchId" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;" />
+            </div>
+            <button type="button" class="secondary-button" @onclick="LoadReferenceDataAsync">
+                Load Clinic Services
+            </button>
+        </div>
+    </section>
+
+    @if (generatedTicket is not null)
+    {
+        <!-- Generated OPD Token & Thermal Slip -->
+        <section class="panel thermal-token-slip" aria-live="polite" style="max-width: 450px; margin-bottom: 24px; border: 2px dashed #0284c7; background: #f0f9ff; padding: 20px; border-radius: 8px;">
+            <div style="text-align: center; border-bottom: 1px dashed #0284c7; padding-bottom: 12px; margin-bottom: 12px;">
+                <p style="font-weight: 700; font-size: 1.1rem; margin: 0; color: #0369a1;">BOOKDOC CLINIC & HOSPITAL</p>
+                <p style="font-size: 0.85rem; margin: 2px 0; color: #475569;">OPD CONSULTATION TOKEN SLIP</p>
+                <p style="font-size: 0.8rem; margin: 0; color: #64748b;">@DateTime.Now.ToString("dd MMM yyyy, hh:mm tt")</p>
+            </div>
+
+            <div style="text-align: center; margin: 16px 0;">
+                <p style="font-size: 0.9rem; margin: 0; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Token Number</p>
+                <h1 style="font-size: 3rem; margin: 4px 0; color: #0284c7; font-weight: 800;">#@generatedTicket.DisplayToken</h1>
+                <QueueStatusBadge Status="@generatedTicket.Status" />
+            </div>
+
+            <div style="font-size: 0.9rem; display: grid; gap: 6px; border-top: 1px dashed #0284c7; padding-top: 12px;">
+                <div><strong>Patient:</strong> @selectedCheckInName</div>
+                <div><strong>Mobile:</strong> @(selectedPatient?.MaskedMobile ?? "--")</div>
+                <div><strong>Doctor / Room:</strong> @selectedDoctorName</div>
+                <div><strong>Priority:</strong> @generatedTicket.Priority</div>
+            </div>
+
+            <div style="margin-top: 18px; display: flex; gap: 10px;">
+                <button type="button" class="primary-button" style="flex: 1;" @onclick="PrintSlipAsync">Print Thermal Slip</button>
+                <button type="button" class="secondary-button" @onclick="ResetCheckIn">New Token</button>
+            </div>
+        </section>
+    }
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+        <!-- Column 1: Patient Search & Walk-In -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <h2>1. Patient Search & Family Selection</h2>
+                    <p>Search by 10-digit mobile number, patient name, or UHID.</p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <input type="text"
+                       placeholder="Mobile number or name..."
+                       @bind="searchQuery"
+                       @bind:event="oninput"
+                       @onkeydown="HandleSearchKeyDown"
+                       style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;" />
+                <button type="button" class="primary-button" @onclick="SearchPatientsAsync" disabled="@isSearching">
+                    @(isSearching ? "Searching..." : "Search")
+                </button>
+                <button type="button" class="secondary-button" @onclick="ToggleWalkInModal">
+                    + Walk-in
+                </button>
+            </div>
+
+            @if (searchResults.Count > 0)
+            {
+                <div style="display: grid; gap: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 16px;">
+                    @foreach (var patient in searchResults)
+                    {
+                        <div style="padding: 10px; border: 1px solid @(selectedPatient?.Id == patient.Id ? "#0284c7" : "#e2e8f0"); border-radius: 6px; cursor: pointer; background: @(selectedPatient?.Id == patient.Id ? "#f0f9ff" : "white");"
+                             @onclick="() => SelectPatientAsync(patient)">
+                            <div style="font-weight: 600; color: #1e293b;">@patient.DisplayName</div>
+                            <div style="font-size: 0.85rem; color: #64748b;">Phone: @patient.MaskedMobile | UHID: @patient.PatientNumber</div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (selectedPatient is not null)
+            {
+                <div style="padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 12px;">
+                    <h3 style="margin-top: 0; font-size: 1rem; color: #0f172a;">Select Who Is Consulting:</h3>
+
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;">
+                        <input type="radio"
+                               name="consultingPerson"
+                               checked="@(targetPatientId == selectedPatient.Id)"
+                               @onchange="() => SetTargetPatient(selectedPatient.Id, selectedPatient.DisplayName)" />
+                        <span><strong>@selectedPatient.DisplayName</strong> (Primary Account)</span>
+                    </label>
+
+                    @if (familyMembers.Count > 0)
+                    {
+                        <p style="font-size: 0.85rem; font-weight: 600; color: #475569; margin: 10px 0 4px 0;">Linked Family Members:</p>
+                        @foreach (var rel in familyMembers)
+                        {
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer;">
+                                <input type="radio"
+                                       name="consultingPerson"
+                                       checked="@(targetPatientId == rel.RelatedPatientId)"
+                                       @onchange="@(() => SetTargetPatient(rel.RelatedPatientId, rel.RelatedPatientDisplayName + " (" + rel.RelationshipType + ")"))" />
+                                <span>@rel.RelatedPatientDisplayName <span style="font-size: 0.8rem; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">@rel.RelationshipType</span></span>
+                            </label>
+                        }
+                    }
+                    else
+                    {
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin: 6px 0 0 0;">No linked family members found.</p>
+                    }
+                </div>
+            }
+        </section>
+
+        <!-- Column 2: Doctor & Token Assignment -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <h2>2. Doctor Selection & Check-In</h2>
+                    <p>Assign consulting doctor, consultation room, and priority.</p>
+                </div>
+            </div>
+
+            <div style="display: grid; gap: 14px;">
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem;">Consulting Doctor</label>
+                    <select @bind="selectedDoctorId" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="">-- Choose Doctor --</option>
+                        @foreach (var doc in doctors)
+                        {
+                            <option value="@doc.Id">@doc.DisplayName (@(doc.RoleCodes.Count > 0 ? string.Join(", ", doc.RoleCodes) : "Doctor"))</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem;">Service Room / Service Point</label>
+                    <select @bind="selectedServicePointId" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="">-- Choose Service Point / Room --</option>
+                        @foreach (var sp in servicePoints)
+                        {
+                            <option value="@sp.Id">@sp.Name (@sp.Code) - @sp.Modality</option>
+                        }
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9rem;">Queue Priority</label>
+                    <select @bind="selectedPriority" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                        <option value="Normal">Normal</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="Emergency">Emergency</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <button type="button"
+                            class="primary-button"
+                            style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;"
+                            @onclick="GenerateTokenAsync"
+                            disabled="@(string.IsNullOrWhiteSpace(targetPatientId) || string.IsNullOrWhiteSpace(selectedServicePointId) || isSubmitting)">
+                        @(isSubmitting ? "Generating Token..." : "Generate OPD Token & Check-In")
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Quick Walk-in Modal -->
+    @if (showWalkInModal)
+    {
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999;">
+            <div style="background: white; padding: 24px; border-radius: 10px; width: 90%; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+                <h2 style="margin-top: 0;">Quick Walk-in Registration</h2>
+                <div style="display: grid; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600;">Full Name *</label>
+                        <input type="text" @bind="walkInFullName" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600;">Phone Number *</label>
+                        <input type="text" @bind="walkInPhone" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600;">Gender</label>
+                        <select @bind="walkInGender" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600;">Date of Birth</label>
+                        <input type="date" @bind="walkInDob" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="secondary-button" @onclick="ToggleWalkInModal">Cancel</button>
+                    <button type="button" class="primary-button" @onclick="SaveWalkInPatientAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Registering..." : "Register & Select")
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool CanAccess => AdminPermissionPolicy.CanAccessOpdReception(Session.Permissions);
+
+    private string? branchId;
+    private string? message;
+    private bool isError;
+    private bool isSearching;
+    private bool isSubmitting;
+    private bool showWalkInModal;
+
+    private string searchQuery = string.Empty;
+    private List<PatientSearchResponse> searchResults = [];
+    private PatientSearchResponse? selectedPatient;
+    private List<PatientRelationResponse> familyMembers = [];
+
+    private string? targetPatientId;
+    private string selectedCheckInName = string.Empty;
+
+    private List<PractitionerSummaryResponse> doctors = [];
+    private List<ImagingServicePointResponse> servicePoints = [];
+
+    private string? selectedDoctorId;
+    private string? selectedDoctorName => doctors.FirstOrDefault(d => d.Id == selectedDoctorId)?.DisplayName ?? "Consulting Doctor";
+    private string? selectedServicePointId;
+    private string selectedPriority = "Normal";
+
+    private QueueTicketResponse? generatedTicket;
+
+    // Walk-in form fields
+    private string walkInFullName = string.Empty;
+    private string walkInPhone = string.Empty;
+    private string walkInGender = "Male";
+    private DateTime walkInDob = DateTime.UtcNow.AddYears(-30);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.IsAuthenticated && CanAccess)
+        {
+            if (!string.IsNullOrWhiteSpace(Session.Session?.Scope?.BranchId))
+            {
+                branchId = Session.Session.Scope.BranchId;
+            }
+            if (!string.IsNullOrWhiteSpace(branchId))
+            {
+                await LoadReferenceDataAsync();
+            }
+        }
+    }
+
+    private async Task LoadReferenceDataAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var docList = await Api.ListPractitionersAsync(branchId);
+            doctors = docList.ToList();
+
+            var spList = await Api.ListImagingServicePointsAsync(branchId);
+            servicePoints = spList.ToList();
+            if (servicePoints.Count > 0)
+            {
+                selectedServicePointId = servicePoints[0].Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Unable to load clinic reference data: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchPatientsAsync();
+        }
+    }
+
+    private async Task SearchPatientsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery) || string.IsNullOrWhiteSpace(branchId)) return;
+        isSearching = true;
+        message = null;
+        try
+        {
+            var results = await Api.SearchPatientsAsync(branchId, searchQuery.Trim());
+            searchResults = results.ToList();
+            if (searchResults.Count == 0)
+            {
+                message = "No matching patients found. Use '+ Walk-in' to register a new patient.";
+                isError = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Search failed: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSearching = false;
+        }
+    }
+
+    private async Task SelectPatientAsync(PatientSearchResponse patient)
+    {
+        selectedPatient = patient;
+        targetPatientId = patient.Id;
+        selectedCheckInName = patient.DisplayName;
+        familyMembers.Clear();
+
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var relations = await Api.ListPatientRelationsAsync(branchId, patient.Id);
+            familyMembers = relations.ToList();
+        }
+        catch
+        {
+            // ignore family fetch failures
+        }
+    }
+
+    private void SetTargetPatient(string patientId, string name)
+    {
+        targetPatientId = patientId;
+        selectedCheckInName = name;
+    }
+
+    private async Task GenerateTokenAsync()
+    {
+        if (string.IsNullOrWhiteSpace(targetPatientId) || string.IsNullOrWhiteSpace(selectedServicePointId) || string.IsNullOrWhiteSpace(branchId))
+            return;
+
+        isSubmitting = true;
+        message = null;
+        try
+        {
+            var request = new CheckInQueueTicketRequest(
+                RequestId: Guid.NewGuid(),
+                ServicePointId: selectedServicePointId,
+                PatientId: targetPatientId,
+                BookingId: null,
+                Priority: selectedPriority,
+                PriorityReason: null);
+
+            var ticket = await Api.CheckInQueueTicketAsync(branchId, request);
+            generatedTicket = ticket;
+            message = $"OPD Token #{ticket.DisplayToken} successfully generated!";
+            isError = false;
+        }
+        catch (Exception ex)
+        {
+            message = $"Check-in failed: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void ResetCheckIn()
+    {
+        generatedTicket = null;
+        message = null;
+    }
+
+    private async Task PrintSlipAsync()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private void ToggleWalkInModal()
+    {
+        showWalkInModal = !showWalkInModal;
+        if (showWalkInModal && !string.IsNullOrWhiteSpace(searchQuery) && searchQuery.All(char.IsDigit))
+        {
+            walkInPhone = searchQuery;
+        }
+    }
+
+    private async Task SaveWalkInPatientAsync()
+    {
+        if (string.IsNullOrWhiteSpace(walkInFullName) || string.IsNullOrWhiteSpace(walkInPhone) || string.IsNullOrWhiteSpace(branchId))
+        {
+            message = "Full name, phone number, and branch are required.";
+            isError = true;
+            return;
+        }
+
+        isSubmitting = true;
+        message = null;
+        try
+        {
+            var nameParts = walkInFullName.Trim().Split(' ', 2);
+            var firstName = nameParts[0];
+            var lastName = nameParts.Length > 1 ? nameParts[1] : ".";
+
+            var person = new StakeholderPersonRequest(
+                Honorific: null,
+                GivenName: firstName,
+                MiddleName: null,
+                FamilyName: lastName,
+                DateOfBirth: DateOnly.FromDateTime(walkInDob),
+                IsDateOfBirthEstimated: false,
+                AdministrativeSex: walkInGender);
+
+            var contact = new StakeholderContactRequest("Mobile", walkInPhone.Trim(), true);
+
+            var request = new RegisterPatientRequest(
+                RegistrationRequestId: Guid.NewGuid(),
+                Person: person,
+                BloodGroup: null,
+                Contacts: [contact],
+                Identifiers: [],
+                Addresses: [],
+                Documents: [],
+                DuplicateOverrideReason: null);
+
+            var newPatient = await Api.RegisterPatientAsync(branchId, request);
+            showWalkInModal = false;
+
+            // Select newly registered patient
+            var searchItem = new PatientSearchResponse(
+                newPatient.Id,
+                newPatient.StakeholderId,
+                newPatient.PatientNumber,
+                $"{firstName} {lastName}".Trim(),
+                walkInDob.Year,
+                walkInGender,
+                walkInPhone,
+                null,
+                newPatient.Status);
+
+            searchResults = [searchItem];
+            await SelectPatientAsync(searchItem);
+
+            message = $"Patient {searchItem.DisplayName} registered and selected!";
+            isError = false;
+        }
+        catch (Exception ex)
+        {
+            message = $"Registration failed: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -1,0 +1,446 @@
+@page "/opd/triage"
+@using BookDoc2026.Contracts.Clinical
+@using BookDoc2026.Contracts.Queues
+@using BookDoc2026.Contracts.Patients
+@inject BookDocApiClient Api
+@inject AdminSessionState Session
+
+<PageTitle>Nurse Triage & Vitals | BOOKDOC2026 ERP</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel">
+        <h1>Session required</h1>
+        <p>Sign in to access Nurse Triage & Vitals Station.</p>
+        <a class="primary-link" href="/login">Sign in</a>
+    </section>
+}
+else if (!CanAccess)
+{
+    <section class="panel">
+        <h1>Access not granted</h1>
+        <p>Clinical permissions are required for triage vitals entry.</p>
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Clinic ERP / Clinical Nursing</p>
+            <h1>Pre-Consultation Nurse Triage & Vitals</h1>
+            <p>Capture patient vital signs, calculate BMI, check allergies, and prepare queue tokens for doctor consultation.</p>
+        </div>
+        <ScopeBadge Label="Intranet ERP" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="notice @(isError ? "error-notice" : "success-notice")" aria-live="polite">@message</p>
+    }
+
+    <!-- Branch & Service Point Filter -->
+    <section class="panel" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="min-width: 220px;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Branch Protected ID</label>
+                <input type="text" placeholder="Branch ID..." @bind="branchId" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;" />
+            </div>
+
+            <div style="min-width: 280px;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Service Room / Doctor Cabin</label>
+                <select @bind="selectedServicePointId" @bind:after="OnServicePointChangedAsync" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <option value="">-- Select Service Point --</option>
+                    @foreach (var sp in servicePoints)
+                    {
+                        <option value="@sp.Id">@sp.Name (@sp.Code) - @sp.Modality</option>
+                    }
+                </select>
+            </div>
+
+            <button type="button" class="secondary-button" @onclick="RefreshQueueAsync" disabled="@isLoading">
+                @(isLoading ? "Refreshing..." : "Refresh Queue")
+            </button>
+        </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start;">
+        <!-- Left: Waiting Tokens Queue -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <h2>Waiting Tokens</h2>
+                    <p>Patients waiting for triage.</p>
+                </div>
+            </div>
+
+            @if (waitingTickets.Count == 0)
+            {
+                <p style="color: #64748b; font-size: 0.9rem;">No waiting tokens found for this service point.</p>
+            }
+            else
+            {
+                <div style="display: grid; gap: 10px; max-height: 550px; overflow-y: auto;">
+                    @foreach (var ticket in waitingTickets)
+                    {
+                        var isSelected = selectedTicket?.Id == ticket.Id;
+                        <div style="padding: 12px; border: 2px solid @(isSelected ? "#0284c7" : "#e2e8f0"); border-radius: 8px; cursor: pointer; background: @(isSelected ? "#f0f9ff" : "white"); transition: all 0.15s ease;"
+                             @onclick="() => SelectTicketAsync(ticket)">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-size: 1.25rem; font-weight: 800; color: #0284c7;">#@ticket.DisplayToken</span>
+                                <QueueStatusBadge Status="@ticket.Status" />
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b;">
+                                Arrived: @ticket.ArrivedUtc.ToLocalTime().ToString("hh:mm tt")
+                            </div>
+                            <div style="font-size: 0.8rem; margin-top: 4px;">
+                                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #334155;">@ticket.Priority</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <!-- Right: Vitals Recording Form & History -->
+        <section class="panel">
+            @if (selectedTicket is null)
+            {
+                <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                    <p style="font-size: 1.1rem; margin: 0;">Select a waiting token from the list to record vital signs.</p>
+                </div>
+            }
+            else
+            {
+                <div class="section-heading" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h2>Triage for Token #@selectedTicket.DisplayToken</h2>
+                        <p>Patient ID: @selectedTicket.PatientId</p>
+                    </div>
+                    <span style="font-weight: 700; color: #0284c7; font-size: 1.1rem;">Status: @selectedTicket.Status</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px;">
+                    <!-- Blood Pressure -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Blood Pressure (mmHg)</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" placeholder="Sys (120)" @bind="systolic" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                            <span style="font-weight: 700; color: #94a3b8;">/</span>
+                            <input type="number" placeholder="Dia (80)" @bind="diastolic" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                        </div>
+                    </div>
+
+                    <!-- Pulse -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Pulse Rate (bpm)</label>
+                        <input type="number" placeholder="e.g. 72" @bind="pulse" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <!-- Temperature -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Temperature (°F)</label>
+                        <input type="number" step="0.1" placeholder="e.g. 98.6" @bind="temperature" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <!-- SpO2 -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">SpO2 Oxygen (%)</label>
+                        <input type="number" placeholder="e.g. 98" @bind="spo2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <!-- Respiratory Rate -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Respiratory Rate (/min)</label>
+                        <input type="number" placeholder="e.g. 18" @bind="respiratoryRate" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <!-- Blood Glucose -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Random Glucose (mg/dL)</label>
+                        <input type="number" step="0.1" placeholder="e.g. 110" @bind="glucose" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <!-- Weight & Height -->
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Weight (kg)</label>
+                        <input type="number" step="0.1" placeholder="e.g. 68.5" @bind="weight" @bind:after="CalculateBmi" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Height (cm)</label>
+                        <input type="number" step="0.1" placeholder="e.g. 172.0" @bind="height" @bind:after="CalculateBmi" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <!-- Calculated BMI Display -->
+                    <div style="padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: flex; flex-direction: column; justify-content: center;">
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #166534;">Computed BMI</span>
+                        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 4px;">
+                            <span style="font-size: 1.5rem; font-weight: 800; color: #15803d;">@(computedBmi.HasValue ? computedBmi.Value.ToString("F1") : "--")</span>
+                            <span style="font-size: 0.8rem; font-weight: 600; color: @BmiColor;">@BmiCategory</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clinical Notes & Allergies -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Chief Complaints & Known Allergies</label>
+                    <textarea rows="2" placeholder="e.g. Mild fever since 2 days, allergy to Penicillin..." @bind="clinicalNotes" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;"></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="secondary-button" @onclick="() => selectedTicket = null">Cancel</button>
+                    <button type="button" class="primary-button" @onclick="SaveVitalsAndPrepareTokenAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Saving Vitals..." : "Save Vitals & Mark Ready for Doctor")
+                    </button>
+                </div>
+
+                <!-- Historical Vitals Trend -->
+                @if (vitalsHistory.Count > 0)
+                {
+                    <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                        <h3 style="font-size: 0.95rem; color: #334155; margin-bottom: 10px;">Previous Vital Signs History</h3>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: #f1f5f9; text-align: left; border-bottom: 1px solid #cbd5e1;">
+                                    <th style="padding: 8px;">Date</th>
+                                    <th style="padding: 8px;">BP</th>
+                                    <th style="padding: 8px;">Pulse</th>
+                                    <th style="padding: 8px;">Temp</th>
+                                    <th style="padding: 8px;">SpO2</th>
+                                    <th style="padding: 8px;">Weight / BMI</th>
+                                    <th style="padding: 8px;">Glucose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var hist in vitalsHistory)
+                                {
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 8px;">@hist.RecordedUtc.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</td>
+                                        <td style="padding: 8px;">@(hist.SystolicBp.HasValue ? $"{hist.SystolicBp}/{hist.DiastolicBp}" : "--")</td>
+                                        <td style="padding: 8px;">@(hist.PulseBpm.HasValue ? $"{hist.PulseBpm} bpm" : "--")</td>
+                                        <td style="padding: 8px;">@(hist.TemperatureF.HasValue ? $"{hist.TemperatureF}°F" : "--")</td>
+                                        <td style="padding: 8px;">@(hist.SpO2Percent.HasValue ? $"{hist.SpO2Percent}%" : "--")</td>
+                                        <td style="padding: 8px;">@(hist.WeightKg.HasValue ? $"{hist.WeightKg} kg" : "--") @(hist.Bmi.HasValue ? $"({hist.Bmi})" : "")</td>
+                                        <td style="padding: 8px;">@(hist.BloodGlucoseMgDl.HasValue ? $"{hist.BloodGlucoseMgDl} mg/dL" : "--")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private bool CanAccess => AdminPermissionPolicy.CanAccessOpdTriage(Session.Permissions);
+
+    private string? branchId;
+    private string? message;
+    private bool isError;
+    private bool isLoading;
+    private bool isSubmitting;
+
+    private List<ImagingServicePointResponse> servicePoints = [];
+    private string? selectedServicePointId;
+
+    private List<QueueTicketResponse> waitingTickets = [];
+    private QueueTicketResponse? selectedTicket;
+
+    private List<VitalSignsResponse> vitalsHistory = [];
+
+    // Vitals Form Fields
+    private int? systolic;
+    private int? diastolic;
+    private int? pulse;
+    private decimal? temperature;
+    private int? spo2;
+    private int? respiratoryRate;
+    private decimal? weight;
+    private decimal? height;
+    private decimal? computedBmi;
+    private decimal? glucose;
+    private string? clinicalNotes;
+
+    private string BmiCategory => computedBmi switch
+    {
+        null => "",
+        < 18.5m => "Underweight",
+        < 25.0m => "Normal",
+        < 30.0m => "Overweight",
+        _ => "Obese"
+    };
+
+    private string BmiColor => computedBmi switch
+    {
+        null => "#64748b",
+        < 18.5m => "#d97706",
+        < 25.0m => "#16a34a",
+        < 30.0m => "#ea580c",
+        _ => "#dc2626"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.IsAuthenticated && CanAccess)
+        {
+            if (!string.IsNullOrWhiteSpace(Session.Session?.Scope?.BranchId))
+            {
+                branchId = Session.Session.Scope.BranchId;
+            }
+            if (!string.IsNullOrWhiteSpace(branchId))
+            {
+                await LoadServicePointsAsync();
+                await RefreshQueueAsync();
+            }
+        }
+    }
+
+    private async Task LoadServicePointsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var spList = await Api.ListImagingServicePointsAsync(branchId);
+            servicePoints = spList.ToList();
+            if (servicePoints.Count > 0)
+            {
+                selectedServicePointId = servicePoints[0].Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Unable to load service points: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task OnServicePointChangedAsync()
+    {
+        selectedTicket = null;
+        await RefreshQueueAsync();
+    }
+
+    private async Task RefreshQueueAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId) || string.IsNullOrWhiteSpace(selectedServicePointId)) return;
+        isLoading = true;
+        message = null;
+        try
+        {
+            var tickets = await Api.ListQueueTicketsAsync(branchId, selectedServicePointId);
+            waitingTickets = tickets.Where(t => t.Status is "Waiting" or "Called").ToList();
+        }
+        catch (Exception ex)
+        {
+            message = $"Failed to load queue: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectTicketAsync(QueueTicketResponse ticket)
+    {
+        selectedTicket = ticket;
+        ResetVitalsForm();
+
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var hist = await Api.ListVitalsHistoryAsync(branchId, ticket.PatientId, 5);
+            vitalsHistory = hist.ToList();
+        }
+        catch
+        {
+            vitalsHistory.Clear();
+        }
+    }
+
+    private void CalculateBmi()
+    {
+        if (weight.HasValue && weight.Value > 0 && height.HasValue && height.Value > 0)
+        {
+            var heightMeters = height.Value / 100m;
+            computedBmi = Math.Round(weight.Value / (heightMeters * heightMeters), 1, MidpointRounding.AwayFromZero);
+        }
+        else
+        {
+            computedBmi = null;
+        }
+    }
+
+    private void ResetVitalsForm()
+    {
+        systolic = null;
+        diastolic = null;
+        pulse = null;
+        temperature = null;
+        spo2 = null;
+        respiratoryRate = null;
+        weight = null;
+        height = null;
+        computedBmi = null;
+        glucose = null;
+        clinicalNotes = null;
+    }
+
+    private async Task SaveVitalsAndPrepareTokenAsync()
+    {
+        if (selectedTicket is null || string.IsNullOrWhiteSpace(branchId)) return;
+
+        isSubmitting = true;
+        message = null;
+        try
+        {
+            var request = new RecordVitalSignsRequest(
+                BookingId: selectedTicket.BookingId,
+                ClinicalEncounterId: null,
+                SystolicBp: systolic,
+                DiastolicBp: diastolic,
+                PulseBpm: pulse,
+                TemperatureF: temperature,
+                SpO2Percent: spo2,
+                RespiratoryRate: respiratoryRate,
+                WeightKg: weight,
+                HeightCm: height,
+                BloodGlucoseMgDl: glucose,
+                ClinicalNotes: clinicalNotes);
+
+            await Api.RecordVitalsAsync(branchId, selectedTicket.PatientId, request);
+
+            // Transition ticket to 'prepare'
+            try
+            {
+                await Api.TransitionQueueTicketAsync(
+                    branchId,
+                    selectedTicket.Id,
+                    "prepare",
+                    new QueueTransitionRequest(selectedTicket.Version, "Triage vitals recorded"));
+            }
+            catch
+            {
+                // Ignore transition failure if state doesn't support prepare
+            }
+
+            message = $"Vital signs recorded for Token #{selectedTicket.DisplayToken}. Patient is ready for doctor!";
+            isError = false;
+
+            selectedTicket = null;
+            await RefreshQueueAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Failed to save vitals: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

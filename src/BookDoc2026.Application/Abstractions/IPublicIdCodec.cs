@@ -63,7 +63,8 @@ public enum PublicIdKind
     MessageDeliveryStatusEvent,
     PatientRelation,
     BookingSlot,
-    BookingRequest
+    BookingRequest,
+    PatientVitalSigns
 }
 
 public interface IPublicIdCodec

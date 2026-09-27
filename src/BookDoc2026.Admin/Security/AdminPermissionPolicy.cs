@@ -44,4 +44,27 @@ public static class AdminPermissionPolicy
         return granted.Contains(FoundationPermissions.SchedulingBookingsView)
             || granted.Contains(FoundationPermissions.SchedulingBookingsConfirm);
     }
+
+    public static bool CanAccessOpdReception(IEnumerable<string> permissions)
+    {
+        var granted = permissions.ToHashSet(StringComparer.Ordinal);
+        return granted.Contains(FoundationPermissions.PatientsView)
+            || granted.Contains(FoundationPermissions.PatientsSearch)
+            || granted.Contains(FoundationPermissions.SchedulingBookingsView);
+    }
+
+    public static bool CanAccessOpdTriage(IEnumerable<string> permissions)
+    {
+        var granted = permissions.ToHashSet(StringComparer.Ordinal);
+        return granted.Contains(FoundationPermissions.EncounterDraftsManage)
+            || granted.Contains(FoundationPermissions.EncountersView);
+    }
+
+    public static bool CanAccessOpdDoctorConsultation(IEnumerable<string> permissions)
+    {
+        var granted = permissions.ToHashSet(StringComparer.Ordinal);
+        return granted.Contains(FoundationPermissions.EncountersView)
+            || granted.Contains(FoundationPermissions.EncounterDraftsManage)
+            || granted.Contains(FoundationPermissions.EncountersSign);
+    }
 }

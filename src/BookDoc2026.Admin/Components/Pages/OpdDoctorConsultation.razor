@@ -1,0 +1,539 @@
+@page "/opd/doctor-consultation"
+@using BookDoc2026.Contracts.Clinical
+@using BookDoc2026.Contracts.Queues
+@using BookDoc2026.Contracts.Workforce
+@using BookDoc2026.Contracts.Patients
+@using System.Text.Json
+@inject BookDocApiClient Api
+@inject AdminSessionState Session
+@inject IJSRuntime JS
+
+<PageTitle>Doctor OPD Consultation | BOOKDOC2026 ERP</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel">
+        <h1>Session required</h1>
+        <p>Sign in to access Doctor OPD Consultation Workspace.</p>
+        <a class="primary-link" href="/login">Sign in</a>
+    </section>
+}
+else if (!CanAccess)
+{
+    <section class="panel">
+        <h1>Access not granted</h1>
+        <p>Clinical encounter permissions are required for Doctor OPD.</p>
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Clinic ERP / OPD Clinical Desk</p>
+            <h1>Doctor OPD Consultation Workspace</h1>
+            <p>Live patient queue, triage vitals review, clinical notes, junior/senior doctor supervisory signing, structured Rx, and printable prescription slip.</p>
+        </div>
+        <ScopeBadge Label="Intranet ERP" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="notice @(isError ? "error-notice" : "success-notice")" aria-live="polite">@message</p>
+    }
+
+    <!-- Top Bar: Branch, Doctor & Room Selector -->
+    <section class="panel" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="min-width: 200px;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Branch Protected ID</label>
+                <input type="text" placeholder="Branch ID..." @bind="branchId" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;" />
+            </div>
+
+            <div style="min-width: 220px;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Attending Doctor</label>
+                <select @bind="selectedDoctorId" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <option value="">-- Select Doctor --</option>
+                    @foreach (var doc in doctors)
+                    {
+                        <option value="@doc.Id">@doc.DisplayName</option>
+                    }
+                </select>
+            </div>
+
+            <div style="min-width: 220px;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Consultation Room</label>
+                <select @bind="selectedServicePointId" @bind:after="OnServicePointChangedAsync" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <option value="">-- Select Room --</option>
+                    @foreach (var sp in servicePoints)
+                    {
+                        <option value="@sp.Id">@sp.Name (@sp.Code)</option>
+                    }
+                </select>
+            </div>
+
+            <button type="button" class="secondary-button" @onclick="RefreshQueueAsync" disabled="@isLoading">
+                @(isLoading ? "Refreshing..." : "Refresh Queue")
+            </button>
+        </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start;">
+        <!-- Left Column: Patient Queue -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <h2>Today's OPD Queue</h2>
+                    <p>Live patient queue for this cabin.</p>
+                </div>
+            </div>
+
+            @if (activeTickets.Count == 0)
+            {
+                <p style="color: #64748b; font-size: 0.9rem;">No active tokens in queue.</p>
+            }
+            else
+            {
+                <div style="display: grid; gap: 10px; max-height: 600px; overflow-y: auto;">
+                    @foreach (var ticket in activeTickets)
+                    {
+                        var isSelected = activeTicket?.Id == ticket.Id;
+                        <div style="padding: 12px; border: 2px solid @(isSelected ? "#0284c7" : "#e2e8f0"); border-radius: 8px; background: @(isSelected ? "#f0f9ff" : "white");">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 1.2rem; font-weight: 800; color: #0284c7;">#@ticket.DisplayToken</span>
+                                <QueueStatusBadge Status="@ticket.Status" />
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">
+                                Arrived: @ticket.ArrivedUtc.ToLocalTime().ToString("hh:mm tt")
+                            </div>
+
+                            <div style="margin-top: 10px; display: flex; gap: 6px;">
+                                @if (ticket.Status is "Waiting" or "Called")
+                                {
+                                    <button type="button" class="primary-button" style="padding: 4px 10px; font-size: 0.8rem;" @onclick="() => CallPatientAsync(ticket)">
+                                        @(ticket.Status == "Called" ? "Re-Call" : "Call In")
+                                    </button>
+                                    <button type="button" class="secondary-button" style="padding: 4px 10px; font-size: 0.8rem;" @onclick="() => StartConsultationAsync(ticket)">
+                                        Start
+                                    </button>
+                                }
+                                else if (ticket.Status == "InService")
+                                {
+                                    <button type="button" class="primary-button" style="padding: 4px 10px; font-size: 0.8rem; background: #16a34a;" @onclick="() => SelectActiveTicket(ticket)">
+                                        Active
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <!-- Right Column: Active Patient Consultation & Rx Workspace -->
+        <section class="panel">
+            @if (activeTicket is null)
+            {
+                <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                    <p style="font-size: 1.1rem; margin: 0;">Call or select a patient from the queue to start consultation.</p>
+                </div>
+            }
+            else
+            {
+                <!-- Patient Banner & Triage Vitals Bar -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div>
+                            <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">Token #@activeTicket.DisplayToken</span>
+                            <span style="margin-left: 12px; font-size: 0.9rem; color: #64748b;">Patient ID: @activeTicket.PatientId</span>
+                        </div>
+                        <span style="background: #e0f2fe; color: #0369a1; font-weight: 600; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem;">
+                            Status: @activeTicket.Status
+                        </span>
+                    </div>
+
+                    @if (patientVitals is not null)
+                    {
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; align-items: center;">
+                            <div><strong>BP:</strong> @(patientVitals.SystolicBp.HasValue ? $"{patientVitals.SystolicBp}/{patientVitals.DiastolicBp} mmHg" : "--")</div>
+                            <div><strong>Pulse:</strong> @(patientVitals.PulseBpm.HasValue ? $"{patientVitals.PulseBpm} bpm" : "--")</div>
+                            <div><strong>Temp:</strong> @(patientVitals.TemperatureF.HasValue ? $"{patientVitals.TemperatureF}°F" : "--")</div>
+                            <div><strong>SpO2:</strong> @(patientVitals.SpO2Percent.HasValue ? $"{patientVitals.SpO2Percent}%" : "--")</div>
+                            <div><strong>Weight:</strong> @(patientVitals.WeightKg.HasValue ? $"{patientVitals.WeightKg} kg" : "--")</div>
+                            <div><strong>BMI:</strong> @(patientVitals.Bmi.HasValue ? $"{patientVitals.Bmi}" : "--")</div>
+                            @if (!string.IsNullOrWhiteSpace(patientVitals.ClinicalNotes))
+                            {
+                                <div style="color: #dc2626; font-weight: 600; width: 100%; margin-top: 4px;">Allergies/Notes: @patientVitals.ClinicalNotes</div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p style="margin: 0; font-size: 0.85rem; color: #94a3b8;">No triage vitals recorded for this visit.</p>
+                    }
+                </div>
+
+                <!-- Clinical Notes Form -->
+                <div style="display: grid; gap: 16px; margin-bottom: 24px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #334155;">Chief Complaints *</label>
+                        <input type="text" placeholder="e.g. Acute severe headache with photophobia" @bind="chiefComplaint" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #334155;">Clinical Examination / Findings</label>
+                            <textarea rows="3" placeholder="e.g. Neck stiffness absent, pupils equal and reactive..." @bind="examination" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;"></textarea>
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #334155;">Diagnosis / Assessment</label>
+                            <textarea rows="3" placeholder="e.g. Migraine without aura (G43.0)" @bind="diagnosis" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Junior / Senior Doctor Supervisory Link -->
+                    <div style="padding: 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px;">
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #92400e;">
+                            Junior / Senior Doctor Association (Supervising Consultant):
+                        </label>
+                        <select @bind="supervisingDoctorId" style="width: 100%; padding: 8px; border: 1px solid #fcd34d; border-radius: 4px;">
+                            <option value="">-- No Supervising Doctor (Independent Consultation) --</option>
+                            @foreach (var doc in doctors.Where(d => d.Id != selectedDoctorId))
+                            {
+                                <option value="@doc.Id">@doc.DisplayName (Senior Consultant)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Structured Prescription (Rx) Writer -->
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">Prescription (Rx)</h3>
+                        <button type="button" class="secondary-button" style="padding: 4px 10px; font-size: 0.8rem;" @onclick="AddMedicationRow">
+                            + Add Medicine
+                        </button>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="background: #f1f5f9; text-align: left; border-bottom: 1px solid #cbd5e1;">
+                                <th style="padding: 8px;">Drug Name</th>
+                                <th style="padding: 8px; width: 100px;">Form</th>
+                                <th style="padding: 8px; width: 90px;">Strength</th>
+                                <th style="padding: 8px; width: 90px;">Frequency</th>
+                                <th style="padding: 8px; width: 90px;">Duration</th>
+                                <th style="padding: 8px; width: 120px;">Timing</th>
+                                <th style="padding: 8px; width: 40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < medications.Count; i++)
+                            {
+                                var med = medications[i];
+                                var idx = i;
+                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                    <td style="padding: 6px;">
+                                        <input type="text" placeholder="e.g. Paracetamol" @bind="med.DrugName" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                                    </td>
+                                    <td style="padding: 6px;">
+                                        <select @bind="med.DosageForm" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <option value="Tablet">Tablet</option>
+                                            <option value="Capsule">Capsule</option>
+                                            <option value="Syrup">Syrup</option>
+                                            <option value="Injection">Injection</option>
+                                            <option value="Ointment">Ointment</option>
+                                        </select>
+                                    </td>
+                                    <td style="padding: 6px;">
+                                        <input type="text" placeholder="650 mg" @bind="med.Strength" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                                    </td>
+                                    <td style="padding: 6px;">
+                                        <select @bind="med.Frequency" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <option value="1-0-1">1-0-1 (BD)</option>
+                                            <option value="1-0-0">1-0-0 (OD Morning)</option>
+                                            <option value="0-0-1">0-0-1 (OD Night)</option>
+                                            <option value="1-1-1">1-1-1 (TDS)</option>
+                                            <option value="SOS">SOS (When needed)</option>
+                                        </select>
+                                    </td>
+                                    <td style="padding: 6px;">
+                                        <input type="text" placeholder="5 Days" @bind="med.Duration" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                                    </td>
+                                    <td style="padding: 6px;">
+                                        <select @bind="med.Timing" style="width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                            <option value="After Food">After Food</option>
+                                            <option value="Before Food">Before Food</option>
+                                            <option value="With Food">With Food</option>
+                                            <option value="Bedtime">Bedtime</option>
+                                        </select>
+                                    </td>
+                                    <td style="padding: 6px; text-align: center;">
+                                        <button type="button" style="background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1rem; font-weight: 700;" @onclick="() => RemoveMedicationRow(idx)">×</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Advice & Follow Up -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #334155;">General Advice & Instructions</label>
+                        <input type="text" placeholder="e.g. Adequate hydration, avoid bright lights, take rest" @bind="generalAdvice" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #334155;">Follow Up</label>
+                        <input type="text" placeholder="e.g. Review after 5 days" @bind="followUp" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" />
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                    <button type="button" class="secondary-button" @onclick="PrintPrescriptionAsync">
+                        Print Prescription Slip
+                    </button>
+                    <button type="button" class="primary-button" style="background: #16a34a;" @onclick="CompleteConsultationAsync" disabled="@isSubmitting">
+                        @(isSubmitting ? "Completing..." : "Complete Consultation & Next Patient")
+                    </button>
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private bool CanAccess => AdminPermissionPolicy.CanAccessOpdDoctorConsultation(Session.Permissions);
+
+    private string? branchId;
+    private string? message;
+    private bool isError;
+    private bool isLoading;
+    private bool isSubmitting;
+
+    private List<PractitionerSummaryResponse> doctors = [];
+    private string? selectedDoctorId;
+    private List<ImagingServicePointResponse> servicePoints = [];
+    private string? selectedServicePointId;
+
+    private List<QueueTicketResponse> activeTickets = [];
+    private QueueTicketResponse? activeTicket;
+    private VitalSignsResponse? patientVitals;
+
+    // Clinical form fields
+    private string chiefComplaint = string.Empty;
+    private string examination = string.Empty;
+    private string diagnosis = string.Empty;
+    private string? supervisingDoctorId;
+    private string generalAdvice = string.Empty;
+    private string followUp = "Review after 5 days";
+
+    private class MedicationRow
+    {
+        public string DrugName { get; set; } = string.Empty;
+        public string DosageForm { get; set; } = "Tablet";
+        public string Strength { get; set; } = "500 mg";
+        public string Frequency { get; set; } = "1-0-1";
+        public string Duration { get; set; } = "5 Days";
+        public string Timing { get; set; } = "After Food";
+    }
+
+    private List<MedicationRow> medications = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.IsAuthenticated && CanAccess)
+        {
+            if (!string.IsNullOrWhiteSpace(Session.Session?.Scope?.BranchId))
+            {
+                branchId = Session.Session.Scope.BranchId;
+            }
+            if (!string.IsNullOrWhiteSpace(branchId))
+            {
+                await LoadDoctorsAndRoomsAsync();
+                await RefreshQueueAsync();
+            }
+        }
+    }
+
+    private async Task LoadDoctorsAndRoomsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var docList = await Api.ListPractitionersAsync(branchId);
+            doctors = docList.ToList();
+            if (doctors.Count > 0)
+            {
+                selectedDoctorId = doctors[0].Id;
+            }
+
+            var spList = await Api.ListImagingServicePointsAsync(branchId);
+            servicePoints = spList.ToList();
+            if (servicePoints.Count > 0)
+            {
+                selectedServicePointId = servicePoints[0].Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Unable to load references: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task OnServicePointChangedAsync()
+    {
+        activeTicket = null;
+        await RefreshQueueAsync();
+    }
+
+    private async Task RefreshQueueAsync()
+    {
+        if (string.IsNullOrWhiteSpace(branchId) || string.IsNullOrWhiteSpace(selectedServicePointId)) return;
+        isLoading = true;
+        message = null;
+        try
+        {
+            var tickets = await Api.ListQueueTicketsAsync(branchId, selectedServicePointId);
+            activeTickets = tickets.Where(t => t.Status is "Waiting" or "Called" or "InService").ToList();
+        }
+        catch (Exception ex)
+        {
+            message = $"Failed to load queue: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CallPatientAsync(QueueTicketResponse ticket)
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            await Api.TransitionQueueTicketAsync(
+                branchId,
+                ticket.Id,
+                "call",
+                new QueueTransitionRequest(ticket.Version, "Doctor called patient to room"));
+            await RefreshQueueAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Call failed: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task StartConsultationAsync(QueueTicketResponse ticket)
+    {
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            var updated = await Api.TransitionQueueTicketAsync(
+                branchId,
+                ticket.Id,
+                "start",
+                new QueueTransitionRequest(ticket.Version, "Consultation started"));
+            await SelectActiveTicket(updated);
+            await RefreshQueueAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Start failed: {ex.Message}";
+            isError = true;
+        }
+    }
+
+    private async Task SelectActiveTicket(QueueTicketResponse ticket)
+    {
+        activeTicket = ticket;
+        ResetConsultationForm();
+
+        if (string.IsNullOrWhiteSpace(branchId)) return;
+        try
+        {
+            patientVitals = await Api.GetLatestVitalsAsync(branchId, ticket.PatientId);
+            if (patientVitals is not null && !string.IsNullOrWhiteSpace(patientVitals.ClinicalNotes))
+            {
+                chiefComplaint = patientVitals.ClinicalNotes;
+            }
+        }
+        catch
+        {
+            patientVitals = null;
+        }
+    }
+
+    private void AddMedicationRow()
+    {
+        medications.Add(new MedicationRow());
+    }
+
+    private void RemoveMedicationRow(int index)
+    {
+        if (index >= 0 && index < medications.Count)
+        {
+            medications.RemoveAt(index);
+        }
+    }
+
+    private void ResetConsultationForm()
+    {
+        chiefComplaint = string.Empty;
+        examination = string.Empty;
+        diagnosis = string.Empty;
+        supervisingDoctorId = null;
+        generalAdvice = string.Empty;
+        followUp = "Review after 5 days";
+        medications = [
+            new MedicationRow { DrugName = "Paracetamol", DosageForm = "Tablet", Strength = "650 mg", Frequency = "1-0-1", Duration = "3 Days", Timing = "After Food" }
+        ];
+    }
+
+    private async Task CompleteConsultationAsync()
+    {
+        if (activeTicket is null || string.IsNullOrWhiteSpace(branchId)) return;
+
+        if (string.IsNullOrWhiteSpace(chiefComplaint))
+        {
+            message = "Chief complaint is required.";
+            isError = true;
+            return;
+        }
+
+        isSubmitting = true;
+        message = null;
+        try
+        {
+            await Api.TransitionQueueTicketAsync(
+                branchId,
+                activeTicket.Id,
+                "complete",
+                new QueueTransitionRequest(activeTicket.Version, "Doctor consultation completed"));
+
+            message = $"Consultation for Token #{activeTicket.DisplayToken} successfully completed!";
+            isError = false;
+
+            activeTicket = null;
+            await RefreshQueueAsync();
+        }
+        catch (Exception ex)
+        {
+            message = $"Failed to complete consultation: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task PrintPrescriptionAsync()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+}
