@@ -1,0 +1,674 @@
+@page "/reception"
+@using BookDoc2026.Blazor.UI.Queues
+@using BookDoc2026.Contracts.Catalog
+@using BookDoc2026.Contracts.Contracts
+@using BookDoc2026.Contracts.Patients
+@using BookDoc2026.Contracts.Queues
+@using BookDoc2026.Contracts.Stakeholders
+@using BookDoc2026.Contracts.Workforce
+@inject BookDocApiClient Api
+@inject AuthApiClient Auth
+@inject PortalSessionState Session
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>OPD Reception Desk | BOOKDOC2026 Portal</PageTitle>
+
+@if (!Session.IsAuthenticated)
+{
+    <section class="panel">
+        <h1>Session required</h1>
+        <p>Sign in to access OPD reception check-in.</p>
+        <a class="primary-link" href="/login">Sign in</a>
+    </section>
+}
+else if (!CanCheckIn)
+{
+    <section class="panel">
+        <h1>Access not granted</h1>
+        <p>Patient search and queue check-in permissions are required for reception operations.</p>
+    </section>
+}
+else
+{
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">OPD Clinic Operations / Front Desk</p>
+            <h1>OPD Reception Desk</h1>
+            <p>Patient search, family member check-in, doctor selection, and OPD package session validation.</p>
+        </div>
+        <ScopeBadge Label="Branch scoped" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="notice @(isError ? "error-notice" : null)" aria-live="polite">@message</p>
+    }
+
+    @if (ticketResult is not null)
+    {
+        <!-- Step: Success & Printable Token Slip -->
+        <section class="panel checkin-success printable-token" aria-live="polite">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">OPD Check-In Complete</p>
+                    <h2>Token #@ticketResult.DisplayToken</h2>
+                </div>
+                <QueueStatusBadge Status="@ticketResult.Status" />
+            </div>
+
+            <div class="token-details" style="display: grid; gap: 8px; margin: 16px 0; padding: 16px; background: white; border: 1px dashed #087e8b; border-radius: 8px;">
+                <p><strong>Patient:</strong> @activePatient?.DisplayName (@(activePatient?.AdministrativeSex ?? "—"), @(activePatient?.BirthYear?.ToString() ?? "—"))</p>
+                @if (selectedRelation is not null)
+                {
+                    <p><strong>Account:</strong> Family Member (@selectedRelation.RelationshipType) of @primaryPatient?.DisplayName</p>
+                }
+                <p><strong>Doctor:</strong> @(selectedDoctor?.DisplayName ?? "General OPD") @(selectedSupervisingDoctor is not null ? $"[Supervising: {selectedSupervisingDoctor.DisplayName}]" : "")</p>
+                <p><strong>Service:</strong> @(selectedService?.Name ?? "OPD Consultation")</p>
+                <p><strong>Destination:</strong> @(selectedServicePoint?.Name ?? "Consultation Room")</p>
+                <p><strong>Session Type:</strong> @(isPackageSession ? $"Covered by Package: {selectedPackage?.ContractCode ?? "OPD Package"}" : "Independent Billable Session")</p>
+                <p><small class="muted">Issued on @DateTime.Now.ToString("dd MMM yyyy, hh:mm tt") · Branch: @branchId</small></p>
+            </div>
+
+            <div class="command-row">
+                <button class="primary" type="button" @onclick="PrintTokenAsync">Print Token Slip</button>
+                <button type="button" @onclick="ResetDesk">Next Patient</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <!-- Step 1: Patient Search & Family Members -->
+        <section class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Step 1</p>
+                    <h2>Patient Search & Family Members</h2>
+                </div>
+                <button type="button" @onclick="() => showRegisterModal = !showRegisterModal">
+                    @(showRegisterModal ? "Close Registration" : "+ Register Walk-in Patient")
+                </button>
+            </div>
+
+            @if (showRegisterModal)
+            {
+                <div class="form-grid" style="grid-template-columns: repeat(3, 1fr); background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                    <label>First Name *<input @bind="regFirstName" placeholder="Given name" /></label>
+                    <label>Last Name *<input @bind="regLastName" placeholder="Family name" /></label>
+                    <label>Mobile Number *<input @bind="regMobile" placeholder="10-digit mobile" /></label>
+                    <label>Sex<select @bind="regSex"><option>Unknown</option><option>Male</option><option>Female</option><option>Other</option></select></label>
+                    <label>Birth Year<input type="number" @bind="regBirthYear" placeholder="e.g. 1985" /></label>
+                    <label>Blood Group<select @bind="regBloodGroup"><option value="">Unknown</option><option>A_Positive</option><option>A_Negative</option><option>B_Positive</option><option>B_Negative</option><option>O_Positive</option><option>O_Negative</option><option>AB_Positive</option><option>AB_Negative</option></select></label>
+                    <div style="grid-column: 1 / -1;">
+                        <button class="primary" type="button" @onclick="RegisterPatientAsync" disabled="@(busy || string.IsNullOrWhiteSpace(regFirstName) || string.IsNullOrWhiteSpace(regMobile))">
+                            @(busy ? "Registering…" : "Register Patient")
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <div class="inline-form">
+                <input aria-label="Search patients" @bind="searchQuery" @bind:event="oninput" placeholder="Search by Mobile, Name, or Patient ID..." />
+                <button @onclick="SearchPatientsAsync" disabled="@(busy || searchQuery.Trim().Length < 2)">Search</button>
+            </div>
+
+            @if (searchPerformed && searchResults.Count == 0)
+            {
+                <p class="empty" style="margin-top: 12px;">No patient matched this search. Click "+ Register Walk-in Patient" to create a new profile.</p>
+            }
+
+            @if (searchResults.Count > 0)
+            {
+                <div class="patient-results">
+                    @foreach (var patient in searchResults)
+                    {
+                        <button class="patient-result @(primaryPatient?.Id == patient.Id ? "selected" : null)"
+                                @onclick="() => SelectPrimaryPatientAsync(patient)" type="button">
+                            <strong>@patient.DisplayName</strong>
+                            <span>@patient.PatientNumber · @(patient.BirthYear?.ToString() ?? "Year N/A") · @patient.AdministrativeSex</span>
+                            <small>@(patient.MaskedMobile ?? patient.MaskedEmail ?? "No contact")</small>
+                        </button>
+                    }
+                </div>
+            }
+
+            <!-- Primary Patient & Family Members Management -->
+            @if (primaryPatient is not null)
+            {
+                <div style="margin-top: 20px; padding: 16px; background: #f0f7fb; border-radius: 8px; border: 1px solid #cce1ef;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div>
+                            <span class="eyebrow">Active Account</span>
+                            <h3 style="margin: 4px 0 0;">@primaryPatient.DisplayName (@primaryPatient.PatientNumber)</h3>
+                        </div>
+                        <button type="button" @onclick="() => showAddFamilyModal = !showAddFamilyModal">
+                            @(showAddFamilyModal ? "Cancel" : "+ Link Family Member")
+                        </button>
+                    </div>
+
+                    <!-- Add Family Member Form -->
+                    @if (showAddFamilyModal)
+                    {
+                        <div class="form-grid" style="grid-template-columns: repeat(3, 1fr); background: white; padding: 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #d5e4ed;">
+                            <label>First Name *<input @bind="famFirstName" placeholder="Family member given name" /></label>
+                            <label>Last Name *<input @bind="famLastName" placeholder="Family name" /></label>
+                            <label>Relationship *<select @bind="famRelationType"><option>Spouse</option><option>Child</option><option>Parent</option><option>Sibling</option><option>Other</option></select></label>
+                            <label>Sex<select @bind="famSex"><option>Unknown</option><option>Male</option><option>Female</option><option>Other</option></select></label>
+                            <label>Birth Year<input type="number" @bind="famBirthYear" placeholder="e.g. 2010" /></label>
+                            <label>Mobile (optional)<input @bind="famMobile" placeholder="Defaults to primary mobile" /></label>
+                            <div style="grid-column: 1 / -1; display: flex; gap: 8px;">
+                                <button class="primary" type="button" @onclick="AddFamilyMemberAsync" disabled="@(busy || string.IsNullOrWhiteSpace(famFirstName))">
+                                    @(busy ? "Saving…" : "Save & Link Member")
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Member Selector Chips -->
+                    <p style="margin: 0 0 8px; font-weight: 600; font-size: 0.85rem; color: #334e68;">Who is this appointment / check-in for?</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <button type="button"
+                                style="padding: 8px 14px; border-radius: 20px; font-size: 0.88rem; @(selectedRelation is null ? "background: #087e8b; color: white; border-color: #087e8b;" : "background: white;")"
+                                @onclick="SelectSelf">
+                            👤 Primary: @primaryPatient.DisplayName
+                        </button>
+
+                        @foreach (var rel in familyMembers)
+                        {
+                            <button type="button"
+                                    style="padding: 8px 14px; border-radius: 20px; font-size: 0.88rem; @(selectedRelation?.Id == rel.Id ? "background: #087e8b; color: white; border-color: #087e8b;" : "background: white;")"
+                                    @onclick="() => SelectFamilyMember(rel)">
+                                👥 @rel.RelationshipType: @rel.RelatedPatientDisplayName (@rel.RelatedPatientNumber)
+                            </button>
+                        }
+                    </div>
+
+                    <p style="margin: 10px 0 0; font-size: 0.82rem; color: #486581;">
+                        Selected for OPD visit: <strong>@activePatient?.DisplayName</strong> (@(selectedRelation is not null ? $"Family Member: {selectedRelation.RelationshipType}" : "Self / Primary"))
+                    </p>
+                </div>
+            }
+        </section>
+
+        @if (activePatient is not null)
+        {
+            <!-- Step 2: Doctor & Service Point Selection -->
+            <section class="panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Step 2</p>
+                        <h2>Doctor & Service Selection</h2>
+                    </div>
+                    <span class="muted">Junior/Senior Doctor Association Supported</span>
+                </div>
+
+                <div class="form-grid checkin-grid">
+                    <label>
+                        Clinical Service *
+                        <select @bind="selectedServiceId">
+                            <option value="">Select Service</option>
+                            @foreach (var s in services)
+                            {
+                                <option value="@s.Id">@s.Code · @s.Name</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Consulting / Attending Doctor *
+                        <select @bind="selectedDoctorId">
+                            <option value="">Select Attending Doctor</option>
+                            @foreach (var doc in practitioners)
+                            {
+                                <option value="@doc.Id">@doc.DisplayName (@doc.PractitionerCode) - @string.Join(", ", doc.RoleCodes)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Supervising Senior Doctor (Optional)
+                        <select @bind="selectedSupervisingDoctorId">
+                            <option value="">No Supervising Doctor (Independent)</option>
+                            @foreach (var doc in practitioners.Where(p => p.Id != selectedDoctorId))
+                            {
+                                <option value="@doc.Id">Dr. @doc.DisplayName (@doc.PractitionerCode)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        OPD Room / Desk Destination *
+                        <select @bind="selectedServicePointId">
+                            <option value="">Select Room / Service Point</option>
+                            @foreach (var sp in servicePoints)
+                            {
+                                <option value="@sp.Id">@sp.Code · @sp.Name (@sp.Modality)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        Priority
+                        <select @bind="priority">
+                            <option>Normal</option>
+                            @if (CanManagePriority)
+                            {
+                                <option>Urgent</option>
+                            }
+                        </select>
+                    </label>
+
+                    @if (priority == "Urgent")
+                    {
+                        <label>
+                            Urgent Reason *
+                            <input @bind="priorityReason" placeholder="Clinical urgency rationale" />
+                        </label>
+                    }
+                </div>
+            </section>
+
+            <!-- Step 3: OPD Treatment Package vs Independent Session -->
+            <section class="panel">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">Step 3</p>
+                        <h2>OPD Package or Independent Session</h2>
+                    </div>
+                    <span class="muted">Package Entitlement Verification</span>
+                </div>
+
+                @if (loadingPackages)
+                {
+                    <p class="muted">Checking patient's active treatment packages...</p>
+                }
+                else if (activePackages.Count > 0)
+                {
+                    <div style="display: grid; gap: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; gap: 12px;">
+                            <label class="checkbox-label" style="font-weight: bold; cursor: pointer;">
+                                <input type="radio" name="sessionType" checked="@isPackageSession" @onchange="() => isPackageSession = true" />
+                                <span>Use Active OPD Treatment Package (Deduct 1 Visit)</span>
+                            </label>
+
+                            <label class="checkbox-label" style="font-weight: bold; cursor: pointer;">
+                                <input type="radio" name="sessionType" checked="@(!isPackageSession)" @onchange="() => isPackageSession = false" />
+                                <span>Independent Pay-Per-Visit Session (Standard Billing)</span>
+                            </label>
+                        </div>
+
+                        @if (isPackageSession)
+                        {
+                            <div style="padding: 14px; background: #e6fffa; border: 1px solid #38b2ac; border-radius: 8px;">
+                                <label style="margin-bottom: 8px;">
+                                    Select Active Package:
+                                    <select @bind="selectedPackageId">
+                                        @foreach (var pkg in activePackages)
+                                        {
+                                            <option value="@pkg.ContractId">
+                                                @pkg.ContractCode - @pkg.Description (@pkg.BalanceVisits visits remaining, Exp: @(pkg.ExpiresUtc?.ToString("dd MMM yyyy") ?? "No Expiry"))
+                                            </option>
+                                        }
+                                    </select>
+                                </label>
+                                @if (selectedPackage is not null)
+                                {
+                                    <p style="margin: 0; color: #234e52; font-size: 0.88rem;">
+                                        ✅ Package has <strong>@selectedPackage.BalanceVisits visits available</strong>.
+                                        This visit will consume 1 entitlement and create no outstanding cashier balance.
+                                    </p>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="padding: 12px; background: #fffaf0; border: 1px solid #dd6b20; border-radius: 8px; color: #7b341e;">
+                                ℹ️ Patient has active packages available, but you chose an <strong>Independent Session</strong>. The patient will be billed standard consultation fees at Cashier.
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="padding: 14px; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <p style="margin: 0; color: #4a5568;">
+                            ℹ️ No active treatment package found for this patient. This check-in will proceed as an <strong>Independent Billable Session</strong>.
+                        </p>
+                    </div>
+                }
+
+                <div style="margin-top: 20px;">
+                    <button class="primary" type="button" @onclick="CheckInOPDAsync" disabled="@(!CanSubmitCheckIn)">
+                        @(busy ? "Submitting Check-in…" : "Issue OPD Queue Token & Complete Check-In")
+                    </button>
+                </div>
+            </section>
+        }
+    }
+}
+
+@code {
+    private List<PatientSearchResponse> searchResults = [];
+    private PatientSearchResponse? primaryPatient;
+    private PatientSearchResponse? activePatient;
+    private List<PatientRelationResponse> familyMembers = [];
+    private PatientRelationResponse? selectedRelation;
+    private List<PatientPackageSummaryResponse> activePackages = [];
+    private List<ServiceResponse> services = [];
+    private List<PractitionerSummaryResponse> practitioners = [];
+    private List<ImagingServicePointResponse> servicePoints = [];
+
+    private QueueTicketResponse? ticketResult;
+    private string branchId = string.Empty;
+    private string searchQuery = string.Empty;
+    private string selectedServiceId = string.Empty;
+    private string selectedDoctorId = string.Empty;
+    private string? selectedSupervisingDoctorId;
+    private string selectedServicePointId = string.Empty;
+    private string priority = "Normal";
+    private string? priorityReason;
+    private string selectedPackageId = string.Empty;
+    private bool isPackageSession = true;
+    private bool loadingPackages;
+    private bool searchPerformed;
+    private bool busy;
+    private bool isError;
+    private string? message;
+
+    // Quick Register Modal Form
+    private bool showRegisterModal;
+    private string regFirstName = string.Empty;
+    private string regLastName = string.Empty;
+    private string regMobile = string.Empty;
+    private string regSex = "Unknown";
+    private int? regBirthYear;
+    private string? regBloodGroup;
+
+    // Add Family Member Form
+    private bool showAddFamilyModal;
+    private string famFirstName = string.Empty;
+    private string famLastName = string.Empty;
+    private string famRelationType = "Spouse";
+    private string famSex = "Unknown";
+    private int? famBirthYear;
+    private string? famMobile;
+
+    private bool CanCheckIn => Session.HasPermission(FoundationPermissions.PatientsSearch)
+        && Session.HasPermission(FoundationPermissions.QueuesCheckIn);
+    private bool CanManagePriority => Session.HasPermission(FoundationPermissions.QueuesPriorityManage);
+
+    private bool CanSubmitCheckIn => !busy && activePatient is not null
+        && !string.IsNullOrWhiteSpace(selectedServicePointId)
+        && (priority != "Urgent" || !string.IsNullOrWhiteSpace(priorityReason));
+
+    private PractitionerSummaryResponse? selectedDoctor =>
+        practitioners.FirstOrDefault(p => p.Id == selectedDoctorId);
+    private PractitionerSummaryResponse? selectedSupervisingDoctor =>
+        practitioners.FirstOrDefault(p => p.Id == selectedSupervisingDoctorId);
+    private ServiceResponse? selectedService =>
+        services.FirstOrDefault(s => s.Id == selectedServiceId);
+    private ImagingServicePointResponse? selectedServicePoint =>
+        servicePoints.FirstOrDefault(sp => sp.Id == selectedServicePointId);
+    private PatientPackageSummaryResponse? selectedPackage =>
+        activePackages.FirstOrDefault(pkg => pkg.ContractId == selectedPackageId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsAuthenticated || !CanCheckIn) return;
+        branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(branchId))
+        {
+            Fail("Select a branch scope when signing in.");
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            services = (await Api.ListServicesAsync(branchId)).Where(s => s.Status == "Active").ToList();
+            if (services.Count > 0) selectedServiceId = services[0].Id;
+
+            servicePoints = (await Api.ListImagingServicePointsAsync(branchId)).Where(sp => sp.IsActive).ToList();
+            if (servicePoints.Count > 0) selectedServicePointId = servicePoints[0].Id;
+
+            practitioners = (await Api.ListPractitionersAsync(branchId)).Where(p => p.Status == "Active").ToList();
+            if (practitioners.Count > 0) selectedDoctorId = practitioners[0].Id;
+        });
+    }
+
+    private Task SearchPatientsAsync() => RunAsync(async () =>
+    {
+        primaryPatient = null;
+        activePatient = null;
+        familyMembers.Clear();
+        activePackages.Clear();
+        selectedRelation = null;
+        searchResults = (await Api.SearchPatientsAsync(branchId, searchQuery.Trim())).ToList();
+        searchPerformed = true;
+    });
+
+    private async Task SelectPrimaryPatientAsync(PatientSearchResponse patient)
+    {
+        primaryPatient = patient;
+        activePatient = patient;
+        selectedRelation = null;
+        showAddFamilyModal = false;
+        await LoadFamilyAndPackagesAsync(patient.Id);
+    }
+
+    private void SelectSelf()
+    {
+        activePatient = primaryPatient;
+        selectedRelation = null;
+        if (primaryPatient is not null)
+        {
+            _ = LoadPackagesAsync(primaryPatient.Id);
+        }
+    }
+
+    private void SelectFamilyMember(PatientRelationResponse rel)
+    {
+        selectedRelation = rel;
+        activePatient = new PatientSearchResponse(
+            rel.RelatedPatientId,
+            string.Empty,
+            rel.RelatedPatientNumber,
+            rel.RelatedPatientDisplayName,
+            null,
+            "Unknown",
+            null,
+            null,
+            "Active");
+
+        _ = LoadPackagesAsync(rel.RelatedPatientId);
+    }
+
+    private async Task LoadFamilyAndPackagesAsync(string patientId)
+    {
+        await RunAsync(async () =>
+        {
+            familyMembers = (await Api.ListPatientRelationsAsync(branchId, patientId)).ToList();
+            await LoadPackagesAsync(patientId);
+        });
+    }
+
+    private async Task LoadPackagesAsync(string patientId)
+    {
+        loadingPackages = true;
+        try
+        {
+            activePackages = (await Api.ListPatientActivePackagesAsync(branchId, patientId)).ToList();
+            if (activePackages.Count > 0)
+            {
+                selectedPackageId = activePackages[0].ContractId;
+                isPackageSession = true;
+            }
+            else
+            {
+                selectedPackageId = string.Empty;
+                isPackageSession = false;
+            }
+        }
+        finally
+        {
+            loadingPackages = false;
+        }
+    }
+
+    private Task RegisterPatientAsync() => RunAsync(async () =>
+    {
+        var requestId = Guid.NewGuid();
+        var contacts = new List<StakeholderContactRequest>
+        {
+            new("Mobile", regMobile.Trim(), true)
+        };
+
+        var person = new StakeholderPersonRequest(
+            null,
+            regFirstName.Trim(),
+            null,
+            regLastName.Trim(),
+            regBirthYear.HasValue ? new DateOnly(regBirthYear.Value, 1, 1) : null,
+            true,
+            regSex);
+
+        var request = new RegisterPatientRequest(
+            requestId,
+            person,
+            regBloodGroup,
+            contacts,
+            [],
+            [],
+            [],
+            null);
+
+        var registered = await Api.RegisterPatientAsync(branchId, request);
+        showRegisterModal = false;
+        regFirstName = regLastName = regMobile = string.Empty;
+        regBirthYear = null;
+
+        var patientSearchObj = new PatientSearchResponse(
+            registered.Id,
+            registered.StakeholderId,
+            registered.PatientNumber,
+            registered.Person.DisplayName,
+            registered.Person.DateOfBirth?.Year,
+            registered.Person.AdministrativeSex,
+            registered.Contacts.FirstOrDefault(c => c.Type == "Mobile")?.Value,
+            null,
+            registered.Status);
+
+        searchResults = [patientSearchObj];
+        await SelectPrimaryPatientAsync(patientSearchObj);
+        message = $"Patient {registered.Person.DisplayName} ({registered.PatientNumber}) registered successfully.";
+    });
+
+    private Task AddFamilyMemberAsync() => RunAsync(async () =>
+    {
+        if (primaryPatient is null) return;
+        var requestId = Guid.NewGuid();
+        var phone = !string.IsNullOrWhiteSpace(famMobile) ? famMobile.Trim() : (primaryPatient.MaskedMobile ?? "9999999999");
+        var contacts = new List<StakeholderContactRequest>
+        {
+            new("Mobile", phone, true)
+        };
+
+        var person = new StakeholderPersonRequest(
+            null,
+            famFirstName.Trim(),
+            null,
+            famLastName.Trim(),
+            famBirthYear.HasValue ? new DateOnly(famBirthYear.Value, 1, 1) : null,
+            true,
+            famSex);
+
+        var registered = await Api.RegisterPatientAsync(branchId, new RegisterPatientRequest(
+            requestId, person, null, contacts, [], [], [], null));
+
+        var relationResult = await Api.AddPatientRelationAsync(branchId, primaryPatient.Id, new AddPatientRelationRequest(
+            registered.Id, famRelationType, false, false, "Linked at reception desk"));
+
+        showAddFamilyModal = false;
+        famFirstName = famLastName = famMobile = string.Empty;
+        famBirthYear = null;
+
+        await LoadFamilyAndPackagesAsync(primaryPatient.Id);
+        SelectFamilyMember(relationResult);
+        message = $"Linked {registered.Person.DisplayName} as {famRelationType} to {primaryPatient.DisplayName}.";
+    });
+
+    private Task CheckInOPDAsync() => RunAsync(async () =>
+    {
+        if (activePatient is null) throw new InvalidOperationException("No patient selected.");
+
+        var requestId = Guid.NewGuid();
+        var ticket = await Api.CheckInQueueTicketAsync(branchId, new(
+            requestId,
+            selectedServicePointId,
+            activePatient.Id,
+            null,
+            priority,
+            priority == "Urgent" ? priorityReason : null));
+
+        ticketResult = ticket;
+
+        // If package session selected and booking ID was issued:
+        if (isPackageSession && !string.IsNullOrWhiteSpace(selectedPackageId) && !string.IsNullOrWhiteSpace(ticket.BookingId))
+        {
+            try
+            {
+                var pkg = selectedPackage ?? activePackages.FirstOrDefault(p => p.ContractId == selectedPackageId);
+                if (pkg is not null)
+                {
+                    await Api.LinkBookingPackageAsync(branchId, ticket.BookingId,
+                        new LinkBookingPackageRequest(Guid.NewGuid(), pkg.ContractId, pkg.EntitlementId, 1));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Non-blocking log if booking already linked or queue ticket didn't have hold
+                Console.WriteLine($"Package link notice: {ex.Message}");
+            }
+        }
+
+        message = ticket.IsReplay
+            ? "Recovered earlier check-in token without duplication."
+            : $"OPD Token #{ticket.DisplayToken} successfully issued.";
+    });
+
+    private async Task PrintTokenAsync() => await JS.InvokeVoidAsync("print");
+
+    private void ResetDesk()
+    {
+        ticketResult = null;
+        primaryPatient = null;
+        activePatient = null;
+        selectedRelation = null;
+        familyMembers.Clear();
+        activePackages.Clear();
+        searchResults.Clear();
+        searchQuery = string.Empty;
+        searchPerformed = false;
+        priority = "Normal";
+        priorityReason = null;
+        message = null;
+        isError = false;
+    }
+
+    private async Task RunAsync(Func<Task> operation)
+    {
+        busy = true; ClearMessage();
+        try
+        {
+            await Session.EnsureFreshAsync(Auth);
+            await operation();
+        }
+        catch (PortalSessionRequiredException ex) { Fail(ex.Message); Navigation.NavigateTo("/login"); }
+        catch (PortalSessionExpiredException ex) { Fail(ex.Message); Navigation.NavigateTo("/login"); }
+        catch (RemoteErrorException ex) { Fail(ex.Error.SafeMessage); }
+        catch (Exception ex) { Fail(ex.Message); }
+        finally { busy = false; }
+    }
+
+    private void Fail(string msg) { message = msg; isError = true; }
+    private void ClearMessage() { message = null; isError = false; }
+}

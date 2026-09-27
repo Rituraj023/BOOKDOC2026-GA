@@ -8,9 +8,15 @@ public sealed record PractitionerAggregate(
     IReadOnlyCollection<PractitionerCredential> Credentials,
     IReadOnlyCollection<PractitionerAssignment> Assignments);
 
+public sealed record PractitionerSummaryItem(
+    PractitionerProfile Profile,
+    string DisplayName,
+    IReadOnlyCollection<PractitionerAssignment> Assignments);
+
 public interface IPractitionerRepository
 {
     Task<Branch?> GetBranchAsync(long branchId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<PractitionerSummaryItem>> ListBranchPractitionersAsync(long branchId, CancellationToken cancellationToken);
     Task<bool> PersonStakeholderExistsAsync(long stakeholderId, CancellationToken cancellationToken);
     Task<bool> ActiveIdentitySubjectExistsAsync(long subjectId, CancellationToken cancellationToken);
     Task<bool> ProfileConflictExistsAsync(long stakeholderId, long subjectId, string practitionerCode,

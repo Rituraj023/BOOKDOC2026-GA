@@ -58,3 +58,13 @@ public sealed record PractitionerAssignmentResponse(
     DateOnly? EffectiveTo,
     string Status,
     long Version);
+
+public sealed record PractitionerSummaryResponse(
+    string Id,
+    string PractitionerCode,
+    string PractitionerTypeCode,
+    string DisplayName,
+    string Status,
+    IReadOnlyCollection<string> RoleCodes,
+    IReadOnlyCollection<string> AssignedServiceIds);
+

@@ -45,6 +45,22 @@ public sealed class PractitionerService(
             ?? throw new NotFoundException("Practitioner was not found."));
     }
 
+    public async Task<IReadOnlyCollection<PractitionerSummaryResponse>> ListBranchPractitionersAsync(
+        long branchId, CancellationToken cancellationToken)
+    {
+        var branch = await RequireBranchAsync(FoundationPermissions.PractitionersView, branchId, cancellationToken);
+        var items = await repository.ListBranchPractitionersAsync(branchId, cancellationToken);
+        return items.Select(item => new PractitionerSummaryResponse(
+            publicIds.Encode(PublicIdKind.Practitioner, item.Profile.Id, item.Profile.TenantId),
+            item.Profile.PractitionerCode,
+            item.Profile.PractitionerTypeCode,
+            item.DisplayName,
+            item.Profile.Status.ToString(),
+            item.Assignments.Select(a => a.RoleCode).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            item.Assignments.Select(a => publicIds.Encode(PublicIdKind.ClinicalService, a.ServiceId, a.TenantId)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+        )).ToArray();
+    }
+
     public async Task<PractitionerResponse> AddCredentialAsync(long branchId, long practitionerId,
         AddPractitionerCredentialRequest request, CancellationToken cancellationToken)
     {

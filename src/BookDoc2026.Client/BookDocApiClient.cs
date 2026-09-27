@@ -144,6 +144,11 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         PractitionerAssignmentStatusAsync(branchId, practitionerId, assignmentId, "end", expectedVersion,
             cancellationToken);
 
+    public Task<IReadOnlyCollection<PractitionerSummaryResponse>> ListPractitionersAsync(
+        string branchId, CancellationToken cancellationToken = default) =>
+        GetAsync<IReadOnlyCollection<PractitionerSummaryResponse>>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/practitioners", cancellationToken);
+
     public Task<EncounterResponse> StartEncounterAsync(
         string branchId, StartEncounterRequest request, CancellationToken cancellationToken = default) =>
         PostAsync<StartEncounterRequest, EncounterResponse>(
@@ -248,6 +253,22 @@ public sealed class BookDocApiClient(HttpClient httpClient)
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients?q={Uri.EscapeDataString(query)}",
             cancellationToken);
 
+    public Task<PatientResponse> RegisterPatientAsync(
+        string branchId,
+        RegisterPatientRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync<RegisterPatientRequest, PatientResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients",
+            request, cancellationToken);
+
+    public Task<PatientResponse> GetPatientAsync(
+        string branchId,
+        string patientId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<PatientResponse>(
+            $"api/v1/branches/{Uri.EscapeDataString(branchId)}/patients/{Uri.EscapeDataString(patientId)}",
+            cancellationToken);
+
     public Task<IReadOnlyCollection<ServiceResponse>> ListServicesAsync(
         string branchId,
         bool includeInactive = false,
@@ -255,6 +276,20 @@ public sealed class BookDocApiClient(HttpClient httpClient)
         GetAsync<IReadOnlyCollection<ServiceResponse>>(
             $"api/v1/branches/{Uri.EscapeDataString(branchId)}/catalog/services?includeInactive={includeInactive.ToString().ToLowerInvariant()}",
             cancellationToken);
+
+    public Task<IReadOnlyCollection<BookableResourceResponse>> ListResourcesAsync(
+        string branchId,
+        string? categoryId = null,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var url = $"api/v1/branches/{Uri.EscapeDataString(branchId)}/resources?includeInactive={includeInactive.ToString().ToLowerInvariant()}";
+        if (!string.IsNullOrWhiteSpace(categoryId))
+        {
+            url += $"&categoryId={Uri.EscapeDataString(categoryId)}";
+        }
+        return GetAsync<IReadOnlyCollection<BookableResourceResponse>>(url, cancellationToken);
+    }
 
     public Task<IReadOnlyCollection<ImagingServicePointResponse>> ListImagingServicePointsAsync(
         string branchId,

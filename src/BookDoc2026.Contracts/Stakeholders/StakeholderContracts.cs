@@ -66,7 +66,11 @@ public sealed record StakeholderPersonResponse(
     DateOnly? DateOfBirth,
     bool IsDateOfBirthEstimated,
     string AdministrativeSex,
-    long Version);
+    long Version)
+{
+    public string DisplayName => string.Join(' ', new[] { GivenName, MiddleName, FamilyName }
+        .Where(value => !string.IsNullOrWhiteSpace(value)));
+}
 
 public sealed record StakeholderCorporateResponse(
     string LegalName,

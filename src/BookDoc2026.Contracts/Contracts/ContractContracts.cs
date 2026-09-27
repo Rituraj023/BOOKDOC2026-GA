@@ -89,7 +89,13 @@ public sealed record PatientPackageSummaryResponse(
     int TotalUnits,
     int ConsumedUnits,
     decimal UnitPrice,
-    string Currency);
+    string Currency)
+{
+    public int BalanceVisits => AvailableUnits;
+    public string ContractCode => ContractNumber;
+    public string Description => $"{ContractTypeCode} Package ({AvailableUnits} visits remaining)";
+    public DateTimeOffset? ExpiresUtc => new DateTimeOffset(ValidTo.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
+}
 
 public sealed record BookingPackageStatusResponse(
     string BookingId,
@@ -99,16 +105,21 @@ public sealed record BookingPackageStatusResponse(
     string? ContractNumber,
     string? EntitlementId,
     int? Units,
-    string? Status);
+    string? Status,
+    int? BalanceRemaining = null,
+    int? ConsumedUnits = null)
+{
+    public string? ContractCode => ContractNumber;
+}
 
 public sealed record LinkBookingPackageRequest(
     Guid RequestId,
     string ContractId,
     string EntitlementId,
-    int Units,
-    long ExpectedEntitlementVersion);
+    int Units = 1,
+    long ExpectedEntitlementVersion = 0);
 
 public sealed record UnlinkBookingPackageRequest(
-    long ExpectedReservationVersion,
-    long ExpectedEntitlementVersion,
-    string Reason);
+    long ExpectedReservationVersion = 0,
+    long ExpectedEntitlementVersion = 0,
+    string Reason = "Unlinked from booking");

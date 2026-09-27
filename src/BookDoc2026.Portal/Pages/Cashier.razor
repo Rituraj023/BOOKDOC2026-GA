@@ -2,6 +2,7 @@
 @using BookDoc2026.Blazor.UI.Billing
 @using BookDoc2026.Contracts.Billing
 @using BookDoc2026.Contracts.Catalog
+@using BookDoc2026.Contracts.Contracts
 @inject BookDocApiClient Api
 @inject AuthApiClient Auth
 @inject PortalSessionState Session
@@ -32,7 +33,7 @@ else
             {
                 <div class="patient-results">@foreach (var patient in patients)
                 {
-                    <button type="button" class="patient-result @(selectedPatient?.Id == patient.Id ? "selected" : null)" @onclick="() => selectedPatient = patient">
+                    <button type="button" class="patient-result @(selectedPatient?.Id == patient.Id ? "selected" : null)" @onclick="() => SelectPatientAsync(patient)">
                         <strong>@patient.DisplayName</strong><span>@patient.PatientNumber · @(patient.BirthYear?.ToString() ?? "Year unavailable")</span><small>@(patient.MaskedMobile ?? patient.MaskedEmail ?? "No masked contact")</small>
                     </button>
                 }</div>
@@ -42,6 +43,48 @@ else
                 <label>Protected Contract ID (optional)<input @bind="contractId" /></label>
                 <label>Currency<input maxlength="3" @bind="currency" /></label>
                 <label>Invoice note (optional)<input @bind="invoiceNotes" /></label>
+                @if (!string.IsNullOrWhiteSpace(bookingId))
+                {
+                    <div style="grid-column: 1 / -1; margin-top: 4px;">
+                        <button type="button" @onclick="CheckBookingPackageStatusAsync" disabled="@busy">Check Package Linkage</button>
+                    </div>
+                }
+                @if (bookingPackageStatus is not null)
+                {
+                    <div style="grid-column: 1 / -1; margin-top: 10px; padding: 12px; border-radius: 8px; @(bookingPackageStatus.IsLinkedToPackage ? "background: #e6fffa; border: 1px solid #38b2ac;" : "background: #f8fafc; border: 1px solid #e2e8f0;")">
+                        @if (bookingPackageStatus.IsLinkedToPackage)
+                        {
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="color: #234e52;">✅ Linked to Treatment Package: @bookingPackageStatus.ContractCode</strong>
+                                    <p style="margin: 4px 0 0; font-size: 0.85rem; color: #285e61;">
+                                        Remaining Entitlement: @bookingPackageStatus.BalanceRemaining visits · Consumed: @bookingPackageStatus.ConsumedUnits
+                                    </p>
+                                </div>
+                                <button type="button" @onclick="UnlinkPackageAsync" disabled="@busy">Unlink Booking from Package</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div>
+                                <strong style="color: #4a5568;">ℹ️ Independent Session (Not linked to package)</strong>
+                                @if (patientPackages.Count > 0)
+                                {
+                                    <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+                                        <span>Link to active package:</span>
+                                        <select @bind="packageToLinkId" style="width: auto;">
+                                            @foreach (var pkg in patientPackages)
+                                            {
+                                                <option value="@pkg.ContractId">@pkg.ContractCode (@pkg.BalanceVisits visits left)</option>
+                                            }
+                                        </select>
+                                        <button type="button" class="primary" @onclick="LinkPackageAsync" disabled="@busy">Link to Package</button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </section>
 
@@ -139,9 +182,12 @@ else
     private readonly CashierBillingDraft draft = new();
     private readonly List<PatientSearchResponse> patients = [];
     private readonly List<ServiceResponse> services = [];
+    private readonly List<PatientPackageSummaryResponse> patientPackages = [];
+    private BookingPackageStatusResponse? bookingPackageStatus;
     private PatientSearchResponse? selectedPatient;
     private string branchId = string.Empty, searchQuery = string.Empty, serviceId = string.Empty, currency = "INR";
     private string? bookingId, contractId, invoiceNotes, paymentNotes, tenderReference, message;
+    private string packageToLinkId = string.Empty;
     private string tenderMethod = "Cash";
     private int quantity = 1;
     private decimal unitPrice, tenderAmount, allocationAmount;
@@ -167,10 +213,65 @@ else
 
     private Task SearchAsync() => RunAsync(async () =>
     {
-        selectedPatient = null; patients.Clear();
+        selectedPatient = null; patients.Clear(); patientPackages.Clear(); bookingPackageStatus = null;
         patients.AddRange(await Api.SearchPatientsAsync(branchId, searchQuery.Trim()));
         searchPerformed = true;
     });
+
+    private async Task SelectPatientAsync(PatientSearchResponse patient)
+    {
+        selectedPatient = patient;
+        patientPackages.Clear();
+        bookingPackageStatus = null;
+        await RunAsync(async () =>
+        {
+            var pkgs = await Api.ListPatientActivePackagesAsync(branchId, patient.Id);
+            patientPackages.AddRange(pkgs);
+            if (patientPackages.Count > 0) packageToLinkId = patientPackages[0].ContractId;
+            if (!string.IsNullOrWhiteSpace(bookingId))
+            {
+                await CheckBookingPackageStatusAsync();
+            }
+        });
+    }
+
+    private async Task CheckBookingPackageStatusAsync()
+    {
+        if (string.IsNullOrWhiteSpace(bookingId)) return;
+        await RunAsync(async () =>
+        {
+            bookingPackageStatus = await Api.GetBookingPackageStatusAsync(branchId, bookingId.Trim());
+            if (bookingPackageStatus.IsLinkedToPackage)
+            {
+                contractId = bookingPackageStatus.ContractId;
+            }
+        });
+    }
+
+    private async Task LinkPackageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(bookingId) || string.IsNullOrWhiteSpace(packageToLinkId)) return;
+        var pkg = patientPackages.FirstOrDefault(p => p.ContractId == packageToLinkId);
+        if (pkg is null) return;
+        await RunAsync(async () =>
+        {
+            await Api.LinkBookingPackageAsync(branchId, bookingId.Trim(), new(Guid.NewGuid(), pkg.ContractId, pkg.EntitlementId, 1));
+            message = "Booking successfully linked to OPD treatment package entitlement.";
+            await CheckBookingPackageStatusAsync();
+        });
+    }
+
+    private async Task UnlinkPackageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(bookingId)) return;
+        await RunAsync(async () =>
+        {
+            await Api.UnlinkBookingPackageAsync(branchId, bookingId.Trim(), new(Reason: "Unlinked by cashier staff"));
+            message = "Booking unlinked from package. It is now an independent billable visit.";
+            contractId = null;
+            await CheckBookingPackageStatusAsync();
+        });
+    }
 
     private void AddLine()
     {

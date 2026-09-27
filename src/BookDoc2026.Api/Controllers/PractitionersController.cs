@@ -25,6 +25,14 @@ public sealed class PractitionersController(PractitionerService service, HttpPub
     }
 
     [Authorize(Policy = FoundationPermissions.PractitionersView)]
+    [HttpGet]
+    public async Task<ActionResult<ApiEnvelope<IReadOnlyCollection<PractitionerSummaryResponse>>>> List(
+        string branchId, CancellationToken cancellationToken) =>
+        Ok(new ApiEnvelope<IReadOnlyCollection<PractitionerSummaryResponse>>(
+            await service.ListBranchPractitionersAsync(ids.Tenant(PublicIdKind.Branch, branchId), cancellationToken),
+            HttpContext.TraceIdentifier));
+
+    [Authorize(Policy = FoundationPermissions.PractitionersView)]
     [HttpGet("{practitionerId}")]
     public async Task<ActionResult<ApiEnvelope<PractitionerResponse>>> Get(string branchId, string practitionerId,
         CancellationToken cancellationToken) => Ok(new ApiEnvelope<PractitionerResponse>(

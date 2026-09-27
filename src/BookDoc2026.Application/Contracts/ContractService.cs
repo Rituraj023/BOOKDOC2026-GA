@@ -233,6 +233,7 @@ public sealed class ContractService(
 
         var contract = await repository.GetContractAsync(branchId, reservation.Reservation.ContractId, false, cancellationToken);
 
+        var balance = reservation.Entitlement.TotalUnits - reservation.Entitlement.ConsumedUnits;
         return new BookingPackageStatusResponse(
             bookingId,
             true,
@@ -241,7 +242,9 @@ public sealed class ContractService(
             contract?.Agreement.ContractNumber,
             publicIds.Encode(PublicIdKind.ContractEntitlement, reservation.Reservation.EntitlementId, reservation.Reservation.TenantId),
             reservation.Reservation.Units,
-            reservation.Reservation.Status.ToString());
+            reservation.Reservation.Status.ToString(),
+            balance,
+            reservation.Entitlement.ConsumedUnits);
     }
 
     public async Task<EntitlementReservationResponse> LinkBookingToPackageAsync(
@@ -256,7 +259,15 @@ public sealed class ContractService(
         var decodedContractId = publicIds.Decode(PublicIdKind.Contract, request.ContractId, branch.TenantId);
         var decodedEntitlementId = publicIds.Decode(PublicIdKind.ContractEntitlement, request.EntitlementId, branch.TenantId);
 
-        var reserveReq = new ReserveEntitlementRequest(request.RequestId, bookingId, request.Units, request.ExpectedEntitlementVersion);
+        var expectedVersion = request.ExpectedEntitlementVersion;
+        if (expectedVersion <= 0)
+        {
+            var contract = await repository.GetContractAsync(branchId, decodedContractId, false, cancellationToken);
+            var ent = contract?.Entitlements.FirstOrDefault(e => e.Id == decodedEntitlementId);
+            if (ent is not null) expectedVersion = ent.Version;
+        }
+
+        var reserveReq = new ReserveEntitlementRequest(request.RequestId, bookingId, request.Units, expectedVersion);
         return await ReserveAsync(branchId, decodedContractId, decodedEntitlementId, reserveReq, cancellationToken);
     }
 
@@ -268,7 +279,10 @@ public sealed class ContractService(
         var existing = await repository.GetActiveReservationForBookingAsync(branchId, decodedBookingId, true, cancellationToken)
             ?? throw new NotFoundException("This booking is not linked to any active package entitlement.");
 
-        var releaseReq = new ReleaseEntitlementReservationRequest(request.ExpectedReservationVersion, request.ExpectedEntitlementVersion, request.Reason);
+        var resVersion = request.ExpectedReservationVersion > 0 ? request.ExpectedReservationVersion : existing.Reservation.Version;
+        var entVersion = request.ExpectedEntitlementVersion > 0 ? request.ExpectedEntitlementVersion : existing.Entitlement.Version;
+
+        var releaseReq = new ReleaseEntitlementReservationRequest(resVersion, entVersion, request.Reason);
         return await ReleaseAsync(branchId, existing.Reservation.Id, releaseReq, cancellationToken);
     }
 }

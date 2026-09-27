@@ -10,11 +10,82 @@
     <label>Assessment<textarea @bind="Model.Assessment" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
     <label>Plan<textarea @bind="Model.Plan" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
     <label class="wide">Instructions (optional)<textarea @bind="Model.Instructions" @bind:event="oninput" @bind:after="NotifyChanged"></textarea></label>
+
+    <div class="prescription-section" style="grid-column: 1 / -1; margin-top: 12px; padding: 14px; background: #f8fafc; border: 1px solid #dce5ed; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h4 style="margin: 0; color: #1e3a5f;">Prescription (Rx)</h4>
+            <button type="button" @onclick="AddMedicine" style="font-size: 0.82rem; padding: 4px 10px;">+ Add Medicine</button>
+        </div>
+        @if (Model.Prescriptions.Count > 0)
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Drug / Medicine</th>
+                            <th>Dosage</th>
+                            <th>Frequency</th>
+                            <th>Duration</th>
+                            <th>Advice</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (rx, idx) in Model.Prescriptions.Select((item, index) => (item, index)))
+                        {
+                            <tr>
+                                <td><input @bind="rx.DrugName" @bind:after="NotifyChanged" placeholder="e.g. Paracetamol" /></td>
+                                <td><input @bind="rx.Dosage" @bind:after="NotifyChanged" placeholder="e.g. 650 mg" style="width: 90px;" /></td>
+                                <td>
+                                    <select @bind="rx.Frequency" @bind:after="NotifyChanged" style="width: 100px;">
+                                        <option>1-0-1</option>
+                                        <option>1-1-1</option>
+                                        <option>1-0-0</option>
+                                        <option>0-0-1</option>
+                                        <option>SOS</option>
+                                    </select>
+                                </td>
+                                <td><input @bind="rx.Duration" @bind:after="NotifyChanged" placeholder="e.g. 5 days" style="width: 90px;" /></td>
+                                <td>
+                                    <select @bind="rx.Instructions" @bind:after="NotifyChanged" style="width: 120px;">
+                                        <option>After meals</option>
+                                        <option>Before meals</option>
+                                        <option>With water</option>
+                                        <option>At bedtime</option>
+                                    </select>
+                                </td>
+                                <td><button type="button" @onclick="() => RemoveMedicine(idx)" style="color: #991b1b; padding: 2px 6px;">✕</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="muted" style="margin: 0; font-size: 0.85rem;">No medicines added yet. Click "+ Add Medicine" to prescribe medications.</p>
+        }
+    </div>
 </div>
 
 @code {
     [Parameter, EditorRequired] public EncounterDraft Model { get; set; } = default!;
     [Parameter] public EventCallback Changed { get; set; }
+
+    private void AddMedicine()
+    {
+        Model.Prescriptions.Add(new PrescriptionItem());
+        _ = NotifyChanged();
+    }
+
+    private void RemoveMedicine(int index)
+    {
+        if (index >= 0 && index < Model.Prescriptions.Count)
+        {
+            Model.Prescriptions.RemoveAt(index);
+            _ = NotifyChanged();
+        }
+    }
 
     private Task NotifyChanged() => Changed.InvokeAsync();
 }

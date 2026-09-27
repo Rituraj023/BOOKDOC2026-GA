@@ -1,8 +1,10 @@
 @page "/clinical/encounters"
+@using BookDoc2026.Contracts.Workforce
 @inject BookDocApiClient Api
 @inject AuthApiClient Auth
 @inject PortalSessionState Session
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Clinical agenda | BOOKDOC2026 Portal</PageTitle>
 
@@ -31,12 +33,31 @@ else
     {
         <section class="panel clinical-plan-heading">
             <div class="section-heading"><div><p class="eyebrow">@selectedItem.BookingNumber</p><h2>@selectedItem.PatientDisplayName</h2></div><span class="clinical-state">@(encounter?.Status ?? "Encounter not started")</span></div>
-            <div class="clinical-metadata"><span>@selectedItem.PatientNumber</span><span>@selectedItem.ServiceCode · @selectedItem.ServiceName</span><span>@selectedItem.StartUtc.ToLocalTime().ToString("g")</span></div>
+            <div class="clinical-metadata">
+                <span>@selectedItem.PatientNumber</span>
+                <span>@selectedItem.ServiceCode · @selectedItem.ServiceName</span>
+                <span>@selectedItem.StartUtc.ToLocalTime().ToString("g")</span>
+                @if (encounter?.SupervisingPractitionerId is not null)
+                {
+                    <span style="color: #087e8b; font-weight: 600;">Supervised by: Dr. @(seniorDoctors.FirstOrDefault(d => d.Id == encounter.SupervisingPractitionerId)?.DisplayName ?? "Assigned")</span>
+                }
+            </div>
         </section>
 
         @if (encounter is null && CanDraft)
         {
-            <section class="panel clinical-command"><div class="section-heading"><div><p class="eyebrow">Common clinical record</p><h2>Start Encounter draft</h2></div><span class="muted">No specialty protocol is implied</span></div><EncounterDraftForm Model="draft" Changed="StateHasChanged" />
+            <section class="panel clinical-command">
+                <div class="section-heading"><div><p class="eyebrow">Common clinical record</p><h2>Start Encounter draft</h2></div><span class="muted">Senior/Junior Doctor link supported</span></div>
+                <label style="margin-bottom: 12px;">Supervising Doctor (Senior Consultant - Optional)
+                    <select @bind="draft.SupervisingPractitionerId">
+                        <option value="">No Supervising Doctor (Independent)</option>
+                        @foreach (var doc in seniorDoctors)
+                        {
+                            <option value="@doc.Id">Dr. @doc.DisplayName (@doc.PractitionerCode)</option>
+                        }
+                    </select>
+                </label>
+                <EncounterDraftForm Model="draft" Changed="StateHasChanged" />
                 <button class="primary" type="button" @onclick="StartEncounterAsync" disabled="@(busy || !CanSaveDraft)">Start Encounter</button>
             </section>
         }
@@ -48,7 +69,18 @@ else
         {
             @if (encounter.Status == "Draft" && CanDraft)
             {
-                <section class="panel clinical-command"><div class="section-heading"><div><p class="eyebrow">Draft revision @encounter.LatestRevisionNumber</p><h2>Update Encounter</h2></div><span class="muted">Saving appends; it does not overwrite</span></div><EncounterDraftForm Model="draft" Changed="StateHasChanged" />
+                <section class="panel clinical-command">
+                    <div class="section-heading"><div><p class="eyebrow">Draft revision @encounter.LatestRevisionNumber</p><h2>Update Encounter</h2></div><span class="muted">Saving appends; it does not overwrite</span></div>
+                    <label style="margin-bottom: 12px;">Supervising Doctor (Senior Consultant - Optional)
+                        <select @bind="draft.SupervisingPractitionerId">
+                            <option value="">No Supervising Doctor (Independent)</option>
+                            @foreach (var doc in seniorDoctors)
+                            {
+                                <option value="@doc.Id">Dr. @doc.DisplayName (@doc.PractitionerCode)</option>
+                            }
+                        </select>
+                    </label>
+                    <EncounterDraftForm Model="draft" Changed="StateHasChanged" />
                     <div class="command-row"><button type="button" @onclick="ReviseDraftAsync" disabled="@(busy || !CanSaveDraft)">Append draft revision</button>@if (CanSign) { <button class="primary" type="button" @onclick="SignAsync" disabled="@(busy || !CanSignCurrent)">Sign current draft</button> }</div>
                     @if (CanSign && !CanSignCurrent) { <p class="muted">@(draft.CanSign ? "Save the changed draft before signing." : "Assessment and plan are required before signing.")</p> }
                 </section>
@@ -84,6 +116,61 @@ else
             }
 
             <section class="panel"><div class="section-heading"><div><p class="eyebrow">Immutable history</p><h2>@encounter.EncounterNumber</h2></div><span class="muted">Version @encounter.Version</span></div><EncounterHistory Encounter="encounter" /></section>
+
+            @if (encounter is not null)
+            {
+                <section class="panel printable-prescription" style="margin-top: 16px;">
+                    <div style="border-bottom: 2px solid #087e8b; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between;">
+                        <div>
+                            <h2 style="margin: 0; color: #087e8b;">PRESCRIPTION & CLINICAL SUMMARY</h2>
+                            <small class="muted">Branch: @branchId · Date: @DateTime.Today.ToString("dd MMM yyyy")</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>Encounter: @encounter.EncounterNumber</strong>
+                            <p style="margin: 2px 0 0; font-size: 0.82rem; color: #64748b;">Booking: @selectedItem.BookingNumber</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                        <div>
+                            <p style="margin: 0;"><strong>Patient:</strong> @selectedItem.PatientDisplayName</p>
+                            <p style="margin: 4px 0 0;"><strong>Patient ID:</strong> @selectedItem.PatientNumber</p>
+                        </div>
+                        <div>
+                            <p style="margin: 0;"><strong>Attending Doctor:</strong> @(Session.Session?.DisplayName ?? "Attending Doctor")</p>
+                            @if (!string.IsNullOrWhiteSpace(encounter.SupervisingPractitionerId))
+                            {
+                                <p style="margin: 4px 0 0;"><strong>Supervising Doctor:</strong> Dr. @(seniorDoctors.FirstOrDefault(d => d.Id == encounter.SupervisingPractitionerId)?.DisplayName ?? encounter.SupervisingPractitionerId)</p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (LatestPersistedContent is not null)
+                    {
+                        <div style="margin-bottom: 16px; display: grid; gap: 8px;">
+                            <p style="margin: 0;"><strong>Chief Complaint:</strong> @LatestPersistedContent.ChiefComplaint</p>
+                            @if (!string.IsNullOrWhiteSpace(LatestPersistedContent.Assessment))
+                            {
+                                <p style="margin: 0;"><strong>Diagnosis:</strong> @LatestPersistedContent.Assessment</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(LatestPersistedContent.Instructions))
+                            {
+                                <div style="margin-top: 10px; padding: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                    <strong>Rx / Advice & Instructions:</strong>
+                                    <pre style="font-family: inherit; font-size: 0.9rem; white-space: pre-wrap; margin: 6px 0 0;">@LatestPersistedContent.Instructions</pre>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div style="margin-top: 32px; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <button class="primary" type="button" @onclick="PrintPrescriptionAsync">Print Prescription Slip</button>
+                        <div style="text-align: center; border-top: 1px solid #718096; width: 220px; padding-top: 6px;">
+                            <small>Doctor's Signature</small>
+                        </div>
+                    </div>
+                </section>
+            }
         }
     }
 }
@@ -93,6 +180,7 @@ else
     private readonly List<InvestigationOrderResponse> investigationOrders = [];
     private readonly List<InvestigationServiceOptionResponse> investigationServices = [];
     private readonly List<ImagingServicePointResponse> imagingServicePoints = [];
+    private readonly List<PractitionerSummaryResponse> seniorDoctors = [];
     private readonly Dictionary<string, Guid> investigationHandoffRequestIds = new(StringComparer.Ordinal);
     private readonly EncounterDraft draft = new();
     private ClinicalAgendaItemResponse? selectedItem;
@@ -149,6 +237,13 @@ else
         branchId = Session.Session?.Scope?.BranchId ?? string.Empty;
         if (string.IsNullOrWhiteSpace(branchId)) { Fail("Select a branch scope when signing in."); return; }
         await LoadAgendaAsync();
+        try
+        {
+            var doctors = await Api.ListPractitionersAsync(branchId);
+            seniorDoctors.Clear();
+            seniorDoctors.AddRange(doctors.Where(d => d.Status == "Active"));
+        }
+        catch { /* non-blocking */ }
     }
 
     private Task LoadAgendaAsync() => RunAsync(async () =>
@@ -168,10 +263,10 @@ else
     });
 
     private Task StartEncounterAsync() => MutateAsync(async () => await Api.StartEncounterAsync(branchId,
-        new(selectedItem!.BookingId, draft.ToRequest())), "Encounter draft started.");
+        new(selectedItem!.BookingId, draft.ToRequest(), draft.SupervisingPractitionerId)), "Encounter draft started.");
 
     private Task ReviseDraftAsync() => MutateAsync(async () => await Api.ReviseEncounterDraftAsync(branchId,
-        encounter!.Id, new(encounter.Version, draft.ToRequest())), "Draft revision appended.");
+        encounter!.Id, new(encounter.Version, draft.ToRequest(), draft.SupervisingPractitionerId)), "Draft revision appended.");
 
     private Task SignAsync() => MutateAsync(async () => await Api.SignEncounterAsync(branchId, encounter!.Id,
         new(encounter.Version)), "Encounter signed; the next specialty handoff is now available.");
@@ -256,10 +351,13 @@ else
 
     private void PopulateDraft()
     {
+        draft.SupervisingPractitionerId = encounter?.SupervisingPractitionerId;
         var content = encounter?.Revisions.OrderByDescending(item => item.RevisionNumber).First().Content;
         if (content is null) { draft.Reset(); return; }
         draft.Load(content);
     }
+
+    private async Task PrintPrescriptionAsync() => await JS.InvokeVoidAsync("print");
 
     private void ResetDraft() => draft.Reset();
     private async Task RunAsync(Func<Task> operation)

@@ -13,6 +13,57 @@ public sealed class PractitionerRepository(BookDocDbContext db) : IPractitionerR
     public Task<Branch?> GetBranchAsync(long branchId, CancellationToken cancellationToken) =>
         db.Branches.SingleOrDefaultAsync(item => item.Id == branchId, cancellationToken);
 
+    public async Task<IReadOnlyCollection<PractitionerSummaryItem>> ListBranchPractitionersAsync(
+        long branchId, CancellationToken cancellationToken)
+    {
+        var branch = await db.Branches.SingleOrDefaultAsync(item => item.Id == branchId, cancellationToken);
+        if (branch is null) return [];
+
+        var assignedPractitionerIds = await db.PractitionerAssignments
+            .Where(a => a.TenantId == branch.TenantId && a.BranchId == branchId && a.Status == PractitionerAssignmentStatus.Active)
+            .Select(a => a.PractitionerId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var query = db.PractitionerProfiles
+            .AsNoTracking()
+            .Where(p => p.TenantId == branch.TenantId && p.Status == PractitionerStatus.Active);
+
+        if (assignedPractitionerIds.Count > 0)
+        {
+            query = query.Where(p => assignedPractitionerIds.Contains(p.Id));
+        }
+
+        var profiles = await query.ToListAsync(cancellationToken);
+        if (profiles.Count == 0) return [];
+
+        var practitionerIds = profiles.Select(p => p.Id).ToList();
+        var stakeholderIds = profiles.Select(p => p.StakeholderId).ToList();
+
+        var assignments = await db.PractitionerAssignments
+            .AsNoTracking()
+            .Where(a => practitionerIds.Contains(a.PractitionerId) && a.Status == PractitionerAssignmentStatus.Active)
+            .ToListAsync(cancellationToken);
+
+        var persons = await db.StakeholderPersons
+            .AsNoTracking()
+            .Where(sp => stakeholderIds.Contains(sp.StakeholderId))
+            .ToListAsync(cancellationToken);
+
+        var personsByStakeholder = persons.ToDictionary(sp => sp.StakeholderId);
+
+        return profiles.Select(p =>
+        {
+            var name = personsByStakeholder.TryGetValue(p.StakeholderId, out var person) && !string.IsNullOrWhiteSpace(person.DisplayName)
+                ? person.DisplayName
+                : p.PractitionerCode;
+            return new PractitionerSummaryItem(
+                p,
+                name,
+                assignments.Where(a => a.PractitionerId == p.Id).ToArray());
+        }).ToArray();
+    }
+
     public async Task<bool> PersonStakeholderExistsAsync(long stakeholderId, CancellationToken cancellationToken)
     {
         if (!await db.Stakeholders.AnyAsync(item => item.Id == stakeholderId && item.Type == StakeholderType.Person
